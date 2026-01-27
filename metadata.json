@@ -1,0 +1,7 @@
+{
+  "name": "Timeline de Aniversários",
+  "description": "Uma aplicação elegante para gerir e visualizar aniversários numa timeline anual, com cálculo de signos, gestão de relações e foco em privacidade.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
