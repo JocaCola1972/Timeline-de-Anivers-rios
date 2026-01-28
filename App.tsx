@@ -1,18 +1,42 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, BirthdayEntry, Relationship, RelationshipType } from './types';
 import { MOCK_USERS, MOCK_RELATIONSHIPS } from './services/mockData';
 import BirthdayTimeline from './components/BirthdayTimeline';
 import ProfilePage from './components/ProfilePage';
 import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
+import { normalizePhone } from './services/zodiacService';
 import { LayoutGrid, User as UserIcon, LogOut, ShieldAlert, Settings } from 'lucide-react';
+
+const STORAGE_KEYS = {
+  USERS: 'birthday_app_users',
+  RELS: 'birthday_app_relationships'
+};
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'timeline' | 'profile' | 'admin'>('timeline');
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [relationships, setRelationships] = useState<Relationship[]>(MOCK_RELATIONSHIPS);
+
+  // Inicializa estado a partir do localStorage ou mock se vazio
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
+    return saved ? JSON.parse(saved) : MOCK_USERS;
+  });
+
+  const [relationships, setRelationships] = useState<Relationship[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.RELS);
+    return saved ? JSON.parse(saved) : MOCK_RELATIONSHIPS;
+  });
+
+  // Persiste alterações no localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.RELS, JSON.stringify(relationships));
+  }, [relationships]);
 
   const timelineData = useMemo<BirthdayEntry[]>(() => {
     if (!currentUser) return [];
@@ -28,16 +52,21 @@ const App: React.FC = () => {
     });
   }, [currentUser, users, relationships]);
 
-  const isAdmin = currentUser?.phone === '917772010';
+  // Admin reconhecido por número normalizado
+  const isAdmin = useMemo(() => {
+    if (!currentUser) return false;
+    return normalizePhone(currentUser.phone) === normalizePhone('917772010');
+  }, [currentUser]);
 
   const handleAddUser = (newUser: User) => {
-    setUsers(prev => [...prev, newUser]);
+    setUsers(prev => [...prev, { ...newUser, phone: normalizePhone(newUser.phone) }]);
   };
 
   const handleUpdateUser = (updatedUser: User) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (currentUser?.id === updatedUser.id) {
-      setCurrentUser(updatedUser);
+    const normalized = { ...updatedUser, phone: normalizePhone(updatedUser.phone) };
+    setUsers(prev => prev.map(u => u.id === normalized.id ? normalized : u));
+    if (currentUser?.id === normalized.id) {
+      setCurrentUser(normalized);
     }
   };
 
@@ -54,7 +83,6 @@ const App: React.FC = () => {
   };
 
   if (!currentUser) {
-    // Passamos a lista 'users' (estado dinâmico) para o LoginPage
     return <LoginPage users={users} onLogin={setCurrentUser} />;
   }
 
