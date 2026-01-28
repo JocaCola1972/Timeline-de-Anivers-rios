@@ -20,8 +20,10 @@ export const getZodiac = (date: Date): { sign: string; traits: string[] } => {
 
 export const normalizePhone = (phone: string): string => {
   if (!phone) return '';
-  // Remove tudo o que não for dígito
-  return phone.replace(/\D/g, '');
+  // Remove tudo o que não é dígito
+  const digits = phone.replace(/\D/g, '');
+  // Para números portugueses ou outros, focamos nos últimos 9 dígitos para garantir compatibilidade
+  return digits.length >= 9 ? digits.slice(-9) : digits;
 };
 
 export const maskPhone = (phone: string): string => {
