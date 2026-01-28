@@ -42,8 +42,6 @@ const App: React.FC = () => {
   };
 
   const handleUpdateRelationships = (newRels: Relationship[]) => {
-    // This function handles the full replacement of a subset or the whole global state
-    // For admin, it might replace everything, for user it replaces their own.
     setRelationships(newRels);
   };
 
@@ -56,7 +54,8 @@ const App: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <LoginPage onLogin={setCurrentUser} />;
+    // Passamos a lista 'users' (estado dinâmico) para o LoginPage
+    return <LoginPage users={users} onLogin={setCurrentUser} />;
   }
 
   return (

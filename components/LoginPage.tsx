@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
-import { MOCK_USERS } from '../services/mockData';
-import { Smartphone, Lock, ArrowRight, ShieldCheck, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Smartphone, Lock, ArrowRight, ShieldCheck, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 
 interface Props {
+  users: User[];
   onLogin: (user: User) => void;
 }
 
-const LoginPage: React.FC<Props> = ({ onLogin }) => {
+const LoginPage: React.FC<Props> = ({ users, onLogin }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
   const [otpCode, setOtpCode] = useState('');
 
   const syncStages = [
-    { progress: 20, message: 'A ligar ao servidor...' },
+    { progress: 20, message: 'A ligar ao servidor seguro...' },
     { progress: 50, message: 'A validar credenciais e encriptação...' },
     { progress: 80, message: 'A descarregar timeline e relações...' },
     { progress: 100, message: 'Sincronização concluída!' }
@@ -32,27 +32,30 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
 
-    // 1. Fase de Validação Local/Simulada
+    // 1. Fase de Validação na lista dinâmica de utilizadores
     setTimeout(() => {
-      const user = MOCK_USERS.find(u => u.phone === phone);
+      // Procuramos na lista 'users' passada por prop, que contém os novos utilizadores criados pelo Admin
+      const user = users.find(u => u.phone === phone);
+      
       if (user) {
         const isAdmin = phone === '917772010';
+        // Se for admin a password é 123456, se for utilizador novo/comum é 123
         const validPassword = isAdmin ? '123456' : '123';
 
         const isAuthValid = (!useOTP && password === validPassword) || (useOTP && otpCode === '123456');
 
         if (isAuthValid) {
-           // 2. Se as credenciais forem válidas, inicia a Sincronização
+           // 2. Se as credenciais forem válidas, inicia a Sincronização visual
            startSynchronization(user, isAdmin);
         } else {
            setError(`Credenciais inválidas para o número ${phone}.`);
            setIsLoading(false);
         }
       } else {
-        setError('Utilizador não encontrado no sistema.');
+        setError('Utilizador não encontrado no sistema. Contacte o Administrador.');
         setIsLoading(false);
       }
-    }, 800);
+    }, 1200);
   };
 
   const startSynchronization = (user: User, isAdmin: boolean) => {
@@ -99,7 +102,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
           </div>
           
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-slate-800">Sincronizando...</h2>
+            <h2 className="text-xl font-bold text-slate-800">Sincronizando Dados</h2>
             <p className="text-slate-500 text-sm h-5">{syncStatus}</p>
           </div>
 
@@ -111,7 +114,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
           </div>
           
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            Não feche a aplicação durante este processo
+            A preparar o seu círculo privado...
           </p>
         </div>
       </div>
@@ -126,7 +129,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
             <Smartphone className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Timeline de Aniversários</h1>
-          <p className="text-slate-500 text-sm px-4">Faz login para aceder à tua rede privada de celebrações.</p>
+          <p className="text-slate-500 text-sm px-4">Aceda à rede privada do seu círculo familiar e de amigos.</p>
         </div>
 
         <div className="flex p-1 bg-slate-50 rounded-xl border border-slate-100">
@@ -154,7 +157,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
                 placeholder="Ex: 917772010"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium"
                 required
               />
             </div>
@@ -170,7 +173,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
                   placeholder="Password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium"
                   required
                 />
               </div>
@@ -187,12 +190,11 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
                 className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none tracking-[0.5em] text-center font-bold text-2xl text-indigo-600"
                 required
               />
-              <p className="text-[10px] text-slate-400 text-center font-medium">Enviámos um SMS de confirmação para {phone}</p>
             </div>
           ) : null}
 
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 animate-shake">
+            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -227,19 +229,13 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
         </form>
 
         <div className="pt-4 border-t border-slate-100">
-          <p className="text-[10px] text-slate-400 text-center px-4 leading-relaxed font-medium">
-            A segurança dos teus dados é prioritária. Todos os dados são encriptados ponta-a-ponta e as relações são validadas pelo círculo.
+          <p className="text-[10px] text-slate-400 text-center px-4 leading-relaxed font-medium uppercase tracking-tighter">
+            Segurança Certificada &bull; Sincronização Encriptada
           </p>
         </div>
       </div>
     </div>
   );
 };
-
-const Loader2 = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-  </svg>
-);
 
 export default LoginPage;
