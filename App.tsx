@@ -19,6 +19,8 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
+  const ADMIN_PHONE = '917772010';
+
   // Carregar dados iniciais do Supabase
   const fetchData = async (isManual = false) => {
     if (isManual) setIsSyncing(true);
@@ -32,15 +34,26 @@ const App: React.FC = () => {
       ]);
       
       if (remoteUsers.length === 0) {
+        // Se a base de dados está vazia, usa os mocks e tenta guardar o admin
         setUsers(MOCK_USERS);
         setRelationships(MOCK_RELATIONSHIPS);
       } else {
-        setUsers(remoteUsers);
+        // Verifica se o admin existe nos dados remotos
+        const adminExists = remoteUsers.some(u => normalizePhone(u.phone) === ADMIN_PHONE);
+        
+        if (!adminExists) {
+          // Se não existir no remoto, garante que ele está presente na lista local
+          const adminMock = MOCK_USERS.find(u => normalizePhone(u.phone) === ADMIN_PHONE) || MOCK_USERS[0];
+          setUsers([adminMock, ...remoteUsers]);
+        } else {
+          setUsers(remoteUsers);
+        }
         setRelationships(remoteRels);
       }
     } catch (err: any) {
       console.error("Erro ao carregar do Supabase:", err);
-      setDbError("Não foi possível ligar à base de dados. Verifique se as tabelas foram criadas no Supabase.");
+      // Se houver erro (ex: tabelas não existem), usa MOCKs como fallback de segurança
+      setDbError("Aviso: A usar modo offline. Certifique-se de que as tabelas 'users' e 'relationships' existem no Supabase.");
       setUsers(MOCK_USERS);
       setRelationships(MOCK_RELATIONSHIPS);
     } finally {
@@ -69,7 +82,7 @@ const App: React.FC = () => {
 
   const isAdmin = useMemo(() => {
     if (!currentUser) return false;
-    return normalizePhone(currentUser.phone) === normalizePhone('917772010');
+    return normalizePhone(currentUser.phone) === ADMIN_PHONE;
   }, [currentUser]);
 
   const handleAddUser = async (newUser: User) => {
@@ -78,7 +91,7 @@ const App: React.FC = () => {
       await db.users.upsert(userToSave);
       setUsers(prev => [...prev, userToSave]);
     } catch (err) {
-      alert("Erro ao guardar no servidor.");
+      alert("Erro ao guardar no servidor. Verifique a consola.");
     }
   };
 
@@ -105,10 +118,13 @@ const App: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (id === '1') {
+    // Impede apagar o admin com base no telemóvel para ser mais robusto
+    const userToDelete = users.find(u => u.id === id);
+    if (userToDelete && normalizePhone(userToDelete.phone) === ADMIN_PHONE) {
       alert("Não pode apagar o administrador principal.");
       return;
     }
+    
     try {
       await db.users.delete(id);
       setUsers(prev => prev.filter(u => u.id !== id));
@@ -181,8 +197,8 @@ const App: React.FC = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {dbError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-4 text-red-800">
-            <AlertTriangle className="w-6 h-6 text-red-500" />
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-4 text-amber-800">
+            <AlertTriangle className="w-6 h-6 text-amber-500" />
             <div className="text-sm font-medium">{dbError}</div>
           </div>
         )}
