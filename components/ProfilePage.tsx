@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Relationship, RelationshipType } from '../types';
-import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search } from 'lucide-react';
+import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search, RefreshCw } from 'lucide-react';
 import { RELATIONSHIP_LABELS } from '../constants';
 import { getZodiac, getChineseZodiac } from '../services/zodiacService';
 
@@ -11,9 +11,11 @@ interface Props {
   relationships: Relationship[];
   onUpdate: (updated: User) => Promise<void>;
   onUpdateRelationships: (rels: Relationship[]) => Promise<void>;
+  onSync: () => void;
+  isSyncing: boolean;
 }
 
-const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate, onUpdateRelationships }) => {
+const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate, onUpdateRelationships, onSync, isSyncing }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'rels'>('info');
   const [formData, setFormData] = useState<User>({
     ...user,
@@ -36,6 +38,10 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
   const [userRels, setUserRels] = useState<Relationship[]>(
     relationships.filter(r => r.userId === user.id)
   );
+
+  useEffect(() => {
+    setUserRels(relationships.filter(r => r.userId === user.id));
+  }, [relationships, user.id]);
 
   const handleBirthdateChange = (newDateStr: string) => {
     if (!newDateStr) {
@@ -60,18 +66,14 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
     e.preventDefault();
     setIsSaving(true);
     try {
-      // Garantir que arrays não são nulos antes de enviar para a BD
       const dataToSave = {
         ...formData,
         likes: formData.likes || [],
         zodiacTraits: formData.zodiacTraits || [],
       };
 
-      // Atualiza utilizador na Cloud (Aguardar conclusão)
       await onUpdate(dataToSave);
       
-      // Atualiza relações: mantemos as relações globais que não pertencem a este utilizador 
-      // e substituímos as deste utilizador pelas novas definições
       const otherRels = relationships.filter(r => r.userId !== user.id);
       const updatedGlobalRels = [...otherRels, ...userRels];
       await onUpdateRelationships(updatedGlobalRels);
@@ -107,7 +109,25 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
-      {/* Seletor de Abas */}
+      <div className="flex items-center justify-between gap-4 bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 bg-white rounded-xl text-indigo-600 shadow-sm ${isSyncing ? 'animate-spin' : ''}`}>
+            <RefreshCw className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-indigo-900">Sincronização Cloud</h4>
+            <p className="text-[10px] text-indigo-700 font-medium">Atualiza os teus dados com a base de dados central.</p>
+          </div>
+        </div>
+        <button 
+          onClick={onSync}
+          disabled={isSyncing}
+          className="px-4 py-2 bg-white text-indigo-600 text-xs font-bold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+        >
+          {isSyncing ? 'A Sincronizar...' : 'Sincronizar Agora'}
+        </button>
+      </div>
+
       <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
         <button
           type="button"

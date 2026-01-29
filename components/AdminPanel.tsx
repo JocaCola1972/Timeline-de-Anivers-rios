@@ -12,7 +12,8 @@ import {
   Users, 
   Link as LinkIcon,
   Plus,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 
 interface Props {
@@ -22,9 +23,11 @@ interface Props {
   onUpdate: (user: User) => void;
   onDelete: (id: string) => void;
   onUpdateRelationships: (rels: Relationship[]) => void;
+  onSync: () => void;
+  isSyncing: boolean;
 }
 
-const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, onDelete, onUpdateRelationships }) => {
+const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, onDelete, onUpdateRelationships, onSync, isSyncing }) => {
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'rels'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -135,9 +138,19 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
               <h2 className="text-xl font-bold text-slate-800">Base de Dados de Equipa</h2>
               <p className="text-slate-500 text-xs">Gestão centralizada de perfis.</p>
             </div>
-            <button onClick={() => { resetForm(); setIsFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md">
-              <UserPlus className="w-5 h-5" /> Novo Utilizador
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onSync} 
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar Cloud'}
+              </button>
+              <button onClick={() => { resetForm(); setIsFormOpen(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md">
+                <UserPlus className="w-5 h-5" /> Novo Utilizador
+              </button>
+            </div>
           </div>
 
           <div className="relative">
@@ -207,10 +220,12 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
             </form>
           </div>
 
-          {/* Lista de Relações Registadas */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Vínculos Ativos no Sistema ({relationships.length})</h3>
+              <button onClick={onSync} disabled={isSyncing} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
             <div className="divide-y divide-slate-100">
               {relationships.length === 0 ? (
@@ -234,7 +249,6 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
         </div>
       )}
 
-      {/* Modal do Utilizador */}
       {isFormOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">

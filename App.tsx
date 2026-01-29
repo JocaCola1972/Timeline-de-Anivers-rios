@@ -45,6 +45,11 @@ const App: React.FC = () => {
         }
         setRelationships(remoteRels);
       }
+      
+      if (isManual) {
+        // Opcional: Pequeno delay para o utilizador ver a animação
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     } catch (err: any) {
       console.error("Erro Supabase:", err);
       setDbError("Modo Offline: Tabelas remotas não encontradas.");
@@ -81,7 +86,6 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
-      // Garantir integridade dos arrays para a BD
       const validatedUser = {
         ...updatedUser,
         likes: updatedUser.likes || [],
@@ -96,7 +100,7 @@ const App: React.FC = () => {
     } catch (err) { 
       console.error("Erro Crítico no Upsert User:", err);
       alert("Erro ao atualizar dados na nuvem. Verifique as permissões."); 
-      throw err; // Propaga para o componente que chamou
+      throw err;
     }
   };
 
@@ -139,6 +143,16 @@ const App: React.FC = () => {
           </div>
           
           <nav className="flex items-center gap-1">
+            <button 
+              onClick={() => fetchData(true)} 
+              disabled={isSyncing}
+              className={`p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all ${isSyncing ? 'animate-spin text-indigo-600' : ''}`}
+              title="Sincronizar agora"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+            <div className="w-px h-6 bg-slate-200 mx-1" />
+            
             <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 ${activeTab === 'timeline' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'}`}>
               <LayoutGrid className="w-4 h-4" /> <span className="hidden md:inline">Timeline</span>
             </button>
@@ -160,8 +174,29 @@ const App: React.FC = () => {
         {dbError && <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm font-medium"><AlertTriangle className="w-5 h-5 text-amber-500" /> {dbError}</div>}
         
         {activeTab === 'timeline' && <BirthdayTimeline users={timelineData} viewerId={currentUser.id} />}
-        {activeTab === 'profile' && <ProfilePage user={currentUser} allUsers={users} relationships={relationships} onUpdate={handleUpdateUser} onUpdateRelationships={handleUpdateRelationships} />}
-        {activeTab === 'admin' && isAdmin && <AdminPanel users={users} relationships={relationships} onAdd={async u => { await db.users.upsert(u); setUsers([...users, u]); }} onUpdate={handleUpdateUser} onDelete={async id => { await db.users.delete(id); setUsers(users.filter(u => u.id !== id)); }} onUpdateRelationships={async rs => { await db.relationships.upsertMany(rs); setRelationships(rs); }} />}
+        {activeTab === 'profile' && (
+          <ProfilePage 
+            user={currentUser} 
+            allUsers={users} 
+            relationships={relationships} 
+            onUpdate={handleUpdateUser} 
+            onUpdateRelationships={handleUpdateRelationships}
+            onSync={() => fetchData(true)}
+            isSyncing={isSyncing}
+          />
+        )}
+        {activeTab === 'admin' && isAdmin && (
+          <AdminPanel 
+            users={users} 
+            relationships={relationships} 
+            onAdd={async u => { await db.users.upsert(u); setUsers([...users, u]); }} 
+            onUpdate={handleUpdateUser} 
+            onDelete={async id => { await db.users.delete(id); setUsers(users.filter(u => u.id !== id)); }} 
+            onUpdateRelationships={async rs => { await db.relationships.upsertMany(rs); setRelationships(rs); }} 
+            onSync={() => fetchData(true)}
+            isSyncing={isSyncing}
+          />
+        )}
       </main>
     </div>
   );
