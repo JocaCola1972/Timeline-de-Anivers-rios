@@ -14,6 +14,7 @@ export interface User {
   birthdate: string; // ISO format
   zodiacSign: string;
   zodiacTraits: string[];
+  chineseZodiac?: string;
   avatarUrl?: string;
   likes: string[];
   isProfilePrivate: boolean;

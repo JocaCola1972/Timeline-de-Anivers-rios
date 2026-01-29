@@ -1,18 +1,14 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { User, Relationship, RelationshipType } from '../types';
-import { getZodiac } from '../services/zodiacService';
+import { getZodiac, getChineseZodiac } from '../services/zodiacService';
 import { RELATIONSHIP_LABELS } from '../constants';
 import { resizeImage, validateHumanImage } from '../services/imageService';
 import { 
   Save, 
-  Shield, 
   Lock, 
   Eye, 
   Camera, 
-  Tag, 
-  Calendar, 
-  Users, 
   Heart, 
   Search, 
   XCircle, 
@@ -38,14 +34,20 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
   const [isSaving, setIsSaving] = useState(false);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState('');
   const [relSearch, setRelSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (formData.birthdate) {
-      const { sign, traits } = getZodiac(new Date(formData.birthdate));
-      setFormData(prev => ({ ...prev, zodiacSign: sign, zodiacTraits: traits }));
+      const date = new Date(formData.birthdate);
+      const { sign, traits } = getZodiac(date);
+      const chinese = getChineseZodiac(date);
+      setFormData(prev => ({ 
+        ...prev, 
+        zodiacSign: sign, 
+        zodiacTraits: traits,
+        chineseZodiac: chinese
+      }));
     }
   }, [formData.birthdate]);
 
@@ -56,7 +58,7 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
       onUpdate(formData);
       onUpdateRelationships(userRels);
       setIsSaving(false);
-      alert('Alterações guardadas!');
+      alert('Alterações guardadas com sucesso!');
     }, 800);
   };
 
@@ -68,10 +70,7 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
     setIsAnalyzingImage(true);
 
     try {
-      // 1. Resize image client-side
       const resizedBase64 = await resizeImage(file);
-      
-      // 2. Validate human content using AI
       const validation = await validateHumanImage(resizedBase64);
       
       if (validation.isHuman) {
@@ -80,17 +79,10 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
         setImageError(validation.reason || "A foto deve conter um ser humano.");
       }
     } catch (err) {
-      setImageError("Erro ao processar a imagem. Tenta novamente.");
+      setImageError("Erro ao processar a imagem.");
     } finally {
       setIsAnalyzingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const addTag = () => {
-    if (tagInput.trim() && !formData.likes.includes(tagInput.trim())) {
-      setFormData(prev => ({ ...prev, likes: [...prev.likes, tagInput.trim()] }));
-      setTagInput('');
     }
   };
 
@@ -130,11 +122,11 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
             <div className="px-8 pb-8">
               <div className="relative -mt-10 mb-6 flex flex-col items-start gap-4">
                 <div className="relative group w-24 h-24 rounded-2xl border-4 border-white overflow-hidden bg-slate-100 shadow-xl">
-                  {isAnalyzingImage ? (
-                    <div className="absolute inset-0 bg-indigo-600/20 flex items-center justify-center backdrop-blur-sm">
+                  {isAnalyzingImage && (
+                    <div className="absolute inset-0 bg-indigo-600/20 flex items-center justify-center backdrop-blur-sm z-20">
                       <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                     </div>
-                  ) : null}
+                  )}
                   <img 
                     src={formData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}`} 
                     className={`w-full h-full object-cover transition-opacity ${isAnalyzingImage ? 'opacity-50' : 'opacity-100'}`} 
@@ -156,14 +148,9 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                   />
                 </div>
                 {imageError && (
-                  <div className="flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-left-2">
+                  <div className="flex items-center gap-2 text-red-600 text-xs font-bold bg-red-50 p-2 rounded-lg">
                     <AlertCircle className="w-4 h-4" />
                     {imageError}
-                  </div>
-                )}
-                {isAnalyzingImage && (
-                  <div className="text-indigo-600 text-xs font-bold animate-pulse">
-                    A validar conteúdo da imagem...
                   </div>
                 )}
               </div>
@@ -179,13 +166,14 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Signo do Zodíaco</p>
-                  <p className="text-xl font-bold text-indigo-900">{formData.zodiacSign}</p>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                  <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1 tracking-wider">Signo Ocidental</p>
+                  <p className="text-lg font-bold text-indigo-900">{formData.zodiacSign}</p>
                 </div>
-                <div className="flex gap-2">
-                  {formData.zodiacTraits.map(t => <span key={t} className="px-3 py-1 bg-white border border-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full uppercase">{t}</span>)}
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-[10px] font-bold text-amber-500 uppercase mb-1 tracking-wider">Signo Chinês</p>
+                  <p className="text-lg font-bold text-amber-900">{formData.chineseZodiac}</p>
                 </div>
               </div>
 
@@ -194,7 +182,7 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                   <div className={`p-2 rounded-lg ${formData.isProfilePrivate ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                     {formData.isProfilePrivate ? <Lock className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </div>
-                  <div><p className="font-bold text-sm text-slate-800">Perfil Privado</p><p className="text-[10px] text-slate-500">Apenas pessoas com relação confirmada vêem os seus detalhes.</p></div>
+                  <div><p className="font-bold text-sm text-slate-800">Perfil Privado</p><p className="text-[10px] text-slate-500">Privacidade ativada.</p></div>
                 </div>
                 <button type="button" onClick={() => setFormData({ ...formData, isProfilePrivate: !formData.isProfilePrivate })} className={`relative w-12 h-6 rounded-full transition-colors ${formData.isProfilePrivate ? 'bg-indigo-600' : 'bg-slate-300'}`}><div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.isProfilePrivate ? 'translate-x-6' : 'translate-x-0'}`} /></button>
               </div>
@@ -203,7 +191,7 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
         ) : (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-right-4 duration-300">
             <div className="p-6 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <div><h3 className="font-bold text-slate-800">Círculo de Conexões</h3><p className="text-xs text-slate-500">Define quem é quem na tua rede.</p></div>
+              <div><h3 className="font-bold text-slate-800">Círculo de Conexões</h3><p className="text-xs text-slate-500">Define quem é quem.</p></div>
               <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" placeholder="Procurar..." value={relSearch} onChange={e => setRelSearch(e.target.value)} className="pl-9 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-xl outline-none w-48" /></div>
             </div>
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
@@ -219,7 +207,6 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                       {Object.entries(RELATIONSHIP_LABELS).map(([val, label]) => (
                         <button key={val} type="button" onClick={() => updateRelationship(u.id, currentRel?.type === val ? null : val as RelationshipType)} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${currentRel?.type === val ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
                       ))}
-                      {currentRel && <button type="button" onClick={() => updateRelationship(u.id, null)} className="px-2 py-1 text-red-400"><XCircle className="w-4 h-4" /></button>}
                     </div>
                   </div>
                 );

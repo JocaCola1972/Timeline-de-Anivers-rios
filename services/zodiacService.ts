@@ -18,11 +18,29 @@ export const getZodiac = (date: Date): { sign: string; traits: string[] } => {
   return { sign: 'Capricórnio', traits: ZODIAC_SIGNS[0].traits };
 };
 
+export const getChineseZodiac = (date: Date): string => {
+  const animals = [
+    { name: 'Macaco', emoji: '🐒' },
+    { name: 'Galo', emoji: '🐓' },
+    { name: 'Cão', emoji: '🐕' },
+    { name: 'Porco', emoji: '🐖' },
+    { name: 'Rato', emoji: '🐭' },
+    { name: 'Boi', emoji: '🐂' },
+    { name: 'Tigre', emoji: '🐯' },
+    { name: 'Coelho', emoji: '🐰' },
+    { name: 'Dragão', emoji: '🐲' },
+    { name: 'Serpente', emoji: '🐍' },
+    { name: 'Cavalo', emoji: '🐎' },
+    { name: 'Cabra', emoji: '🐐' }
+  ];
+  const year = date.getFullYear();
+  const animal = animals[year % 12];
+  return `${animal.emoji} ${animal.name}`;
+};
+
 export const normalizePhone = (phone: string): string => {
   if (!phone) return '';
-  // Remove tudo o que não é dígito
   const digits = phone.replace(/\D/g, '');
-  // Para números portugueses ou outros, focamos nos últimos 9 dígitos para garantir compatibilidade
   return digits.length >= 9 ? digits.slice(-9) : digits;
 };
 
