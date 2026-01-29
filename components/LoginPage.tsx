@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { normalizePhone } from '../services/zodiacService';
-import { Smartphone, Lock, ArrowRight, ShieldCheck, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Smartphone, Lock, ArrowRight, ShieldCheck, AlertCircle, RefreshCw, Loader2, Cake } from 'lucide-react';
 
 interface Props {
   users: User[];
@@ -113,11 +113,12 @@ const LoginPage: React.FC<Props> = ({ users, onLogin }) => {
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 mb-4 shadow-sm border border-indigo-100">
-            <Smartphone className="w-8 h-8" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 mb-4 shadow-sm border border-indigo-100 relative overflow-hidden">
+            <Cake className="w-8 h-8 absolute opacity-20" />
+            <span className="relative z-10 text-2xl font-bold">W</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Timeline Familiar</h1>
-          <p className="text-slate-500 text-sm px-4">Os seus dados estão agora seguros na cloud do seu círculo.</p>
+          <h1 className="text-2xl font-bold text-slate-800">Aniversários da Equipa</h1>
+          <p className="text-slate-500 text-sm px-4">Aceda à plataforma de celebrações do seu círculo de colegas.</p>
         </div>
 
         <div className="flex p-1 bg-slate-50 rounded-xl border border-slate-100">

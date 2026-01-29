@@ -1,5 +1,5 @@
 {
-  "name": "Timeline de Aniversários",
+  "name": "Aniversários da Equipa",
   "description": "Uma aplicação elegante para gerir e visualizar aniversários numa timeline anual, com cálculo de signos, gestão de relações e foco em privacidade.",
   "requestFramePermissions": [
     "camera"

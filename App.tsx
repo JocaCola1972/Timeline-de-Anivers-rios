@@ -8,7 +8,7 @@ import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
 import { normalizePhone } from './services/zodiacService';
 import { db, supabase } from './services/supabase';
-import { LayoutGrid, User as UserIcon, LogOut, ShieldAlert, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
+import { LayoutGrid, User as UserIcon, LogOut, ShieldAlert, Settings, RefreshCw, AlertTriangle, Cake } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -157,9 +157,12 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-100">T</div>
+            <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-100 overflow-hidden">
+              <Cake className="w-6 h-6 absolute opacity-30" />
+              <span className="relative z-10">W</span>
+            </div>
             <div className="hidden sm:block">
-              <span className="font-bold text-slate-800 block leading-none">Aniversários</span>
+              <span className="font-bold text-slate-800 block leading-none">Aniversários da Equipa</span>
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cloud Sync Ativo</span>
             </div>
           </div>

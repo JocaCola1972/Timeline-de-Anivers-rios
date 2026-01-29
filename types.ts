@@ -17,6 +17,7 @@ export interface User {
   chineseZodiac?: string;
   avatarUrl?: string;
   likes: string[];
+  wishlist?: string;
   isProfilePrivate: boolean;
   mustChangePassword?: boolean;
 }

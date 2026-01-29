@@ -43,23 +43,22 @@ export async function validateHumanImage(base64Image: string): Promise<{ isHuman
   const base64Data = base64Image.split(',')[1];
   
   try {
+    // Aligned with Google GenAI SDK guidelines: using contents: { parts: [...] }
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: base64Data,
-              },
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: base64Data,
             },
-            {
-              text: 'Analisa esta imagem. Ela contém uma fotografia clara de um ser humano adequada para um perfil? Responde apenas em formato JSON: {"isHuman": boolean, "reason": "string em português"}.',
-            },
-          ],
-        },
-      ],
+          },
+          {
+            text: 'Analisa esta imagem. Ela contém uma fotografia clara de um ser humano adequada para um perfil? Responde apenas em formato JSON: {"isHuman": boolean, "reason": "string em português"}.',
+          },
+        ],
+      },
       config: {
         responseMimeType: 'application/json'
       }
@@ -69,6 +68,6 @@ export async function validateHumanImage(base64Image: string): Promise<{ isHuman
     return result;
   } catch (error) {
     console.error("Erro ao validar imagem:", error);
-    return { isHuman: false, reason: "Não foi possível validar a imagem no momento." };
+    return { isHuman: false, reason: "Não foi possível validar na imagem no momento." };
   }
 }

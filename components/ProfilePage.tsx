@@ -14,7 +14,9 @@ import {
   XCircle, 
   User as UserIcon,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Gift,
+  Info
 } from 'lucide-react';
 
 interface Props {
@@ -177,7 +179,32 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+              {/* Wishlist Section */}
+              <div className="mt-8 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-pink-500" />
+                  <h3 className="font-bold text-slate-800">A Minha Wishlist</h3>
+                </div>
+                <div className="p-4 bg-pink-50 border border-pink-100 rounded-2xl space-y-3">
+                  <div className="flex items-start gap-3 text-pink-800">
+                    <Info className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs font-medium leading-relaxed">
+                      Diz-nos o que te faria saltar de alegria! Pode ser algo modesto como um café, 
+                      ou algo ambicioso como um <strong>Touro Mecânico</strong> para o escritório, 
+                      um <strong>aumento chorudo</strong> (atenção que o GM e o Financeiro andam por aqui!), 
+                      uma massagem de 5 horas ou até uma viagem à lua. Diverte-te!
+                    </p>
+                  </div>
+                  <textarea 
+                    value={formData.wishlist || ''} 
+                    onChange={e => setFormData({ ...formData, wishlist: e.target.value })}
+                    placeholder="Escreve aqui os teus desejos..."
+                    className="w-full h-32 px-4 py-3 bg-white border border-pink-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 text-sm placeholder:text-pink-300 resize-none shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${formData.isProfilePrivate ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                     {formData.isProfilePrivate ? <Lock className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

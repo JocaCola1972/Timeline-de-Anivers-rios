@@ -18,6 +18,7 @@ const userToDB = (user: User) => ({
   chinese_zodiac: user.chineseZodiac,
   avatar_url: user.avatarUrl,
   likes: user.likes,
+  wishlist: user.wishlist,
   is_profile_private: user.isProfilePrivate,
   must_change_password: user.mustChangePassword || false
 });
@@ -32,6 +33,7 @@ const userFromDB = (data: any): User => ({
   chineseZodiac: data.chinese_zodiac,
   avatarUrl: data.avatar_url,
   likes: data.likes || [],
+  wishlist: data.wishlist,
   isProfilePrivate: data.is_profile_private,
   mustChangePassword: data.must_change_password
 });
