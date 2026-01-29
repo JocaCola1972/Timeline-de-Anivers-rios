@@ -16,11 +16,14 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
   // Carregar dados iniciais do Supabase
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (isManual = false) => {
+    if (isManual) setIsSyncing(true);
+    else setIsLoading(true);
+    
     setDbError(null);
     try {
       const [remoteUsers, remoteRels] = await Promise.all([
@@ -28,7 +31,6 @@ const App: React.FC = () => {
         db.relationships.getAll()
       ]);
       
-      // Se a base de dados estiver vazia, podemos opcionalmente popular com MOCK para o Admin não ver nada vazio
       if (remoteUsers.length === 0) {
         setUsers(MOCK_USERS);
         setRelationships(MOCK_RELATIONSHIPS);
@@ -39,11 +41,11 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Erro ao carregar do Supabase:", err);
       setDbError("Não foi possível ligar à base de dados. Verifique se as tabelas foram criadas no Supabase.");
-      // Fallback para mock em caso de erro crítico para não quebrar a UI
       setUsers(MOCK_USERS);
       setRelationships(MOCK_RELATIONSHIPS);
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
@@ -95,7 +97,6 @@ const App: React.FC = () => {
 
   const handleUpdateRelationships = async (newRels: Relationship[]) => {
     try {
-      // No Supabase upsert lida com múltiplos.
       await db.relationships.upsertMany(newRels);
       setRelationships(newRels);
     } catch (err) {
@@ -147,6 +148,15 @@ const App: React.FC = () => {
             </div>
           </div>
           <nav className="flex items-center gap-1 sm:gap-2">
+            <button 
+              onClick={() => fetchData(true)} 
+              disabled={isSyncing}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all mr-2"
+              title="Sincronizar Manualmente"
+            >
+              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            </button>
+
             <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'timeline' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'}`}>
               <LayoutGrid className="w-4 h-4" />
               <span className="hidden sm:inline">Timeline</span>
