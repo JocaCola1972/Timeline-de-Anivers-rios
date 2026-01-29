@@ -1,10 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// Removed parseISO from date-fns as it was reported as missing; using new Date() instead for ISO strings.
 import { format, getMonth, getDate, isSameDay } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { BirthdayEntry, RelationshipType, User } from '../types';
+import { BirthdayEntry, RelationshipType } from '../types';
 import { MONTHS_PT, RELATIONSHIP_LABELS } from '../constants';
 import { getChineseZodiac } from '../services/zodiacService';
 import { Filter, Users, Shield, Calendar, Sparkles, Gift, X } from 'lucide-react';
@@ -15,67 +14,23 @@ interface Props {
   viewerId: string;
 }
 
-const WishlistModal: React.FC<{ user: BirthdayEntry; onClose: () => void }> = ({ user, onClose }) => {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-      <motion.div 
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden relative"
-      >
-        <div className="h-32 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 flex items-center justify-center relative">
-          <button 
-            onClick={onClose}
-            className="absolute top-6 right-6 p-2 bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="text-4xl">🎁</div>
+const WishlistModal: React.FC<{ user: BirthdayEntry; onClose: () => void }> = ({ user, onClose }) => (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in">
+    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden relative">
+      <div className="h-24 bg-gradient-to-r from-pink-500 to-indigo-600 flex items-center justify-center">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white"><X className="w-5 h-5" /></button>
+        <Gift className="w-10 h-10 text-white" />
+      </div>
+      <div className="p-8 text-center space-y-4">
+        <h3 className="text-xl font-bold text-slate-800">Desejos de {user.name}</h3>
+        <div className="bg-pink-50 p-6 rounded-2xl border border-pink-100 italic text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+          {user.wishlist || "Ainda não pediu nada... mas um gesto simpático conta sempre! ☕️"}
         </div>
-        
-        <div className="p-8 pt-12 relative">
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-            <div className="w-20 h-20 rounded-3xl border-4 border-white overflow-hidden shadow-xl bg-slate-100">
-              <img 
-                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`} 
-                alt={user.name} 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-          
-          <div className="text-center space-y-4">
-            <div>
-              <h3 className="text-2xl font-bold text-slate-800">Prendas para {user.name}</h3>
-              <p className="text-sm text-slate-500 font-medium">O que me faria saltar de alegria no meu dia!</p>
-            </div>
-            
-            <div className="bg-pink-50/50 rounded-3xl p-6 border border-pink-100/50 min-h-[120px] flex items-center justify-center">
-              {user.wishlist ? (
-                <p className="text-slate-700 italic leading-relaxed whitespace-pre-wrap font-medium">
-                  "{user.wishlist}"
-                </p>
-              ) : (
-                <p className="text-slate-400 text-sm font-medium">
-                  {user.name} ainda não definiu a sua wishlist. <br/>Talvez um café e um abraço? ☕️
-                </p>
-              )}
-            </div>
-            
-            <div className="pt-4">
-              <button 
-                onClick={onClose}
-                className="w-full py-4 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 transition-all shadow-lg"
-              >
-                Vou tratar disso! 🚀
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
+        <button onClick={onClose} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all">Fechar</button>
+      </div>
+    </motion.div>
+  </div>
+);
 
 const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
@@ -83,174 +38,71 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
   const [hoveredUser, setHoveredUser] = useState<string | null>(null);
   const [wishlistUser, setWishlistUser] = useState<BirthdayEntry | null>(null);
 
-  const viewer = useMemo(() => users.find(u => u.id === viewerId), [users, viewerId]);
-
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      // Using new Date() as parseISO was missing from date-fns exports
-      const monthMatch = selectedMonth === 'all' || getMonth(new Date(user.birthdate)) === selectedMonth;
-      const relationMatch = selectedRelation === 'all' || user.relationToViewer === selectedRelation;
-      return monthMatch && relationMatch;
-    });
-  }, [users, selectedMonth, selectedRelation]);
-
-  const today = new Date();
+  const viewer = users.find(u => u.id === viewerId);
+  const filteredUsers = users.filter(user => {
+    const m = selectedMonth === 'all' || getMonth(new Date(user.birthdate)) === selectedMonth;
+    const r = selectedRelation === 'all' || user.relationToViewer === selectedRelation;
+    return m && r;
+  });
 
   return (
     <div className="space-y-8">
-      <div className="w-full bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-indigo-500" />
-              Timeline de Aniversários
-            </h2>
-            <p className="text-slate-500 text-sm">Acompanha as datas especiais do teu círculo.</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <Filter className="w-4 h-4 text-slate-400 ml-2" />
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="bg-transparent text-sm font-medium focus:outline-none p-1 pr-4"
-              >
-                <option value="all">Todos os Meses</option>
-                {MONTHS_PT.map((name, i) => (
-                  <option key={name} value={i}>{name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <Users className="w-4 h-4 text-slate-400 ml-2" />
-              <select
-                value={selectedRelation}
-                onChange={(e) => setSelectedRelation(e.target.value as any)}
-                className="bg-transparent text-sm font-medium focus:outline-none p-1 pr-4"
-              >
-                <option value="all">Todas as Relações</option>
-                {Object.entries(RELATIONSHIP_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-indigo-500" /> Timeline Anual</h2>
+          <div className="flex gap-2">
+            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg p-2 outline-none">
+              <option value="all">Todos os Meses</option>
+              {MONTHS_PT.map((m, i) => <option key={m} value={i}>{m}</option>)}
+            </select>
           </div>
         </div>
 
-        <div className="relative overflow-x-auto pb-8 -mx-6 px-6 no-scrollbar">
-          <div className="flex items-end min-w-max h-80 gap-8">
-            {MONTHS_PT.map((monthName, mIndex) => {
-              const monthUsers = filteredUsers.filter(u => getMonth(new Date(u.birthdate)) === mIndex);
-              if (selectedMonth !== 'all' && mIndex !== selectedMonth) return null;
-
-              return (
-                <div key={monthName} className="flex flex-col h-full border-l border-slate-100 pl-4 min-w-[150px]">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-auto mt-2">
-                    {monthName}
-                  </span>
-                  
-                  <div className="flex flex-wrap items-end gap-3 h-52 mt-4">
-                    {monthUsers.sort((a, b) => getDate(new Date(a.birthdate)) - getDate(new Date(b.birthdate))).map((user) => {
-                      const isBirthdayToday = isSameDay(today, new Date(user.birthdate));
-                      const isPrivate = user.isProfilePrivate && !user.relationToViewer && user.id !== viewerId;
+        <div className="flex overflow-x-auto gap-8 pb-4 no-scrollbar min-h-[280px] items-end">
+          {MONTHS_PT.map((name, i) => {
+            const mUsers = filteredUsers.filter(u => getMonth(new Date(u.birthdate)) === i);
+            if (selectedMonth !== 'all' && i !== selectedMonth) return null;
+            return (
+              <div key={name} className="flex flex-col border-l border-slate-100 pl-4 min-w-[140px]">
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">{name}</span>
+                <div className="flex flex-wrap gap-3 items-end h-48">
+                  {mUsers.map(user => (
+                    <div key={user.id} className="relative group cursor-pointer" onMouseEnter={() => setHoveredUser(user.id)} onMouseLeave={() => setHoveredUser(null)}>
+                      {isSameDay(new Date(), new Date(user.birthdate)) && <div className="absolute inset-0 bg-indigo-400 rounded-full animate-ping opacity-50 scale-125" />}
+                      <div className={`w-12 h-12 rounded-full border-2 overflow-hidden bg-white shadow-sm transition-transform group-hover:scale-110 ${isSameDay(new Date(), new Date(user.birthdate)) ? 'border-indigo-500' : 'border-slate-200'}`}>
+                        <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`} className="w-full h-full object-cover" />
+                      </div>
                       
-                      return (
-                        <div
-                          key={user.id}
-                          className="relative group cursor-pointer"
-                          onMouseEnter={() => !isPrivate && setHoveredUser(user.id)}
-                          onMouseLeave={() => setHoveredUser(null)}
-                        >
-                          {isBirthdayToday && (
-                            <div className="absolute inset-0 -m-1 rounded-full bg-indigo-400 animate-ping opacity-75" />
-                          )}
+                      {user.wishlist && <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full border-2 border-white flex items-center justify-center"><Gift className="w-2 h-2 text-white" /></div>}
 
-                          <div className={`relative z-10 w-12 h-12 rounded-full border-2 overflow-hidden bg-white ${isBirthdayToday ? 'border-indigo-500 scale-110 shadow-lg' : 'border-slate-200'}`}>
-                            {isPrivate ? (
-                              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
-                                <Shield className="w-6 h-6" />
-                              </div>
-                            ) : (
-                              <img
-                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`}
-                                alt={user.name}
-                                className="w-full h-full object-cover"
-                              />
-                            )}
-                          </div>
+                      <AnimatePresence>
+                        {hoveredUser === user.id && (
+                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 z-50 w-52 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 text-center">
+                            <p className="font-bold text-slate-800 text-sm mb-1">{user.name}</p>
+                            <p className="text-[10px] text-indigo-500 font-bold uppercase mb-3">{format(new Date(user.birthdate), "d 'de' MMMM", { locale: pt })}</p>
+                            
+                            <div className="space-y-1 mb-4">
+                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter flex items-center justify-center gap-1"><Sparkles className="w-2 h-2" /> {user.zodiacSign} &bull; {getChineseZodiac(new Date(user.birthdate))}</div>
+                            </div>
 
-                          <AnimatePresence>
-                            {hoveredUser === user.id && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-56 bg-white shadow-2xl border border-slate-100 rounded-3xl p-5 text-center"
-                              >
-                                <div className="mb-3">
-                                  <p className="font-bold text-slate-800 text-sm">{user.name}</p>
-                                  <p className="text-xs text-indigo-500 font-bold mt-0.5">
-                                    {format(new Date(user.birthdate), "d 'de' MMMM", { locale: pt })}
-                                  </p>
-                                </div>
-                                
-                                <div className="space-y-1.5 mb-4">
-                                  <div className="flex items-center justify-center gap-1.5 px-2 py-1 bg-indigo-50 rounded-lg">
-                                    <Sparkles className="w-3 h-3 text-indigo-400" />
-                                    <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">
-                                      {user.zodiacSign}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-center gap-1.5 px-2 py-1 bg-amber-50 rounded-lg">
-                                    <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">
-                                      {user.chineseZodiac || getChineseZodiac(new Date(user.birthdate))}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setWishlistUser(user);
-                                  }}
-                                  className="w-full py-2 bg-pink-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-pink-600 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-pink-100"
-                                >
-                                  <Gift className="w-3 h-3" /> Ver Wishlist
-                                </button>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          <div className="mt-2 text-center">
-                            <span className="text-[10px] font-bold text-slate-600">
-                              {getDate(new Date(user.birthdate))}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <button onClick={() => setWishlistUser(user)} className="w-full py-2 bg-pink-500 text-white rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2 hover:bg-pink-600 shadow-md shadow-pink-100">
+                              <Gift className="w-3 h-3" /> Ver Wishlist
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <div className="text-center mt-2"><span className="text-[10px] font-bold text-slate-500">{getDate(new Date(user.birthdate))}</span></div>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <AnimatePresence>
-        {wishlistUser && (
-          <WishlistModal user={wishlistUser} onClose={() => setWishlistUser(null)} />
-        )}
-      </AnimatePresence>
-
-      {viewer && (
-        <DailyHoroscope 
-          westernSign={viewer.zodiacSign} 
-          chineseSign={viewer.chineseZodiac || getChineseZodiac(new Date(viewer.birthdate))} 
-        />
-      )}
+      {wishlistUser && <WishlistModal user={wishlistUser} onClose={() => setWishlistUser(null)} />}
+      {viewer && <DailyHoroscope westernSign={viewer.zodiacSign} chineseSign={getChineseZodiac(new Date(viewer.birthdate))} />}
     </div>
   );
 };
