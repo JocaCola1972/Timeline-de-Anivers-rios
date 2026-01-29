@@ -1,44 +1,85 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Relationship, RelationshipType } from '../types';
 import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search } from 'lucide-react';
 import { RELATIONSHIP_LABELS } from '../constants';
+import { getZodiac, getChineseZodiac } from '../services/zodiacService';
 
 interface Props {
   user: User;
   allUsers: User[];
   relationships: Relationship[];
-  onUpdate: (updated: User) => void;
-  onUpdateRelationships: (rels: Relationship[]) => void;
+  onUpdate: (updated: User) => Promise<void>;
+  onUpdateRelationships: (rels: Relationship[]) => Promise<void>;
 }
 
 const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate, onUpdateRelationships }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'rels'>('info');
-  const [formData, setFormData] = useState<User>(user);
+  const [formData, setFormData] = useState<User>({
+    ...user,
+    likes: user.likes || [],
+    zodiacTraits: user.zodiacTraits || [],
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [relSearch, setRelSearch] = useState('');
+
+  // Sincronizar formData se o user prop mudar (ex: após login ou refresh)
+  useEffect(() => {
+    setFormData({
+      ...user,
+      likes: user.likes || [],
+      zodiacTraits: user.zodiacTraits || [],
+    });
+  }, [user]);
 
   // Filtra as relações do utilizador atual
   const [userRels, setUserRels] = useState<Relationship[]>(
     relationships.filter(r => r.userId === user.id)
   );
 
+  const handleBirthdateChange = (newDateStr: string) => {
+    if (!newDateStr) {
+      setFormData(prev => ({ ...prev, birthdate: newDateStr }));
+      return;
+    }
+    
+    const date = new Date(newDateStr);
+    const { sign, traits } = getZodiac(date);
+    const chinese = getChineseZodiac(date);
+    
+    setFormData(prev => ({
+      ...prev,
+      birthdate: newDateStr,
+      zodiacSign: sign,
+      zodiacTraits: traits,
+      chineseZodiac: chinese
+    }));
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // Atualiza utilizador
-      onUpdate(formData);
+      // Garantir que arrays não são nulos antes de enviar para a BD
+      const dataToSave = {
+        ...formData,
+        likes: formData.likes || [],
+        zodiacTraits: formData.zodiacTraits || [],
+      };
+
+      // Atualiza utilizador na Cloud (Aguardar conclusão)
+      await onUpdate(dataToSave);
       
       // Atualiza relações: mantemos as relações globais que não pertencem a este utilizador 
       // e substituímos as deste utilizador pelas novas definições
       const otherRels = relationships.filter(r => r.userId !== user.id);
       const updatedGlobalRels = [...otherRels, ...userRels];
-      onUpdateRelationships(updatedGlobalRels);
+      await onUpdateRelationships(updatedGlobalRels);
       
       alert('Perfil e relações atualizados com sucesso!');
     } catch (err) {
-      alert('Erro ao guardar alterações.');
+      console.error("Erro ao guardar no Perfil:", err);
+      alert('Erro ao guardar alterações. Verifique a sua ligação.');
     } finally {
       setIsSaving(false);
     }
@@ -69,12 +110,14 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
       {/* Seletor de Abas */}
       <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
         <button
+          type="button"
           onClick={() => setActiveTab('info')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'info' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <UserIcon className="w-4 h-4" /> Dados e Wishlist
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('rels')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'rels' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
         >
@@ -88,8 +131,8 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
             <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
             <div className="px-8 pb-8 -mt-10">
               <div className="w-24 h-24 rounded-2xl border-4 border-white bg-slate-100 mb-6 overflow-hidden shadow-lg group relative">
-                <img src={formData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}`} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <img src={formData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}`} className="w-full h-full object-cover" alt="Avatar" />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -97,11 +140,21 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Nome</label>
-                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input 
+                    type="text" 
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Aniversário</label>
-                  <input type="date" value={formData.birthdate} onChange={e => setFormData({...formData, birthdate: e.target.value})} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  <input 
+                    type="date" 
+                    value={formData.birthdate} 
+                    onChange={e => handleBirthdateChange(e.target.value)} 
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
+                  />
                 </div>
               </div>
 
@@ -109,7 +162,7 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                 <div className="flex items-center gap-2 text-pink-600 font-bold"><Gift className="w-5 h-5" /> A Minha Wishlist</div>
                 <div className="flex gap-3 bg-white/50 p-4 rounded-xl text-pink-800 text-xs">
                   <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <p>O que te faria saltar de alegria? Exemplos: um <strong>Touro Mecânico</strong> para a copa, um <strong>aumento chorudo</strong> (atenção ao GM e Financeiro na lista!), uma massagem de 5h ou uma viagem a Marte. Sê criativo!</p>
+                  <p>O que te faria saltar de alegria? Exemplos: um <strong>Touro Mecânico</strong> para a copa, um <strong>aumento chorudo</strong>, uma massagem de 5h ou uma viagem a Marte. Sê criativo!</p>
                 </div>
                 <textarea 
                   value={formData.wishlist || ''} 

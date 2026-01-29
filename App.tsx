@@ -81,10 +81,34 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
-      await db.users.upsert(updatedUser);
-      setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-      if (currentUser?.id === updatedUser.id) setCurrentUser(updatedUser);
-    } catch (err) { alert("Erro ao atualizar dados."); }
+      // Garantir integridade dos arrays para a BD
+      const validatedUser = {
+        ...updatedUser,
+        likes: updatedUser.likes || [],
+        zodiacTraits: updatedUser.zodiacTraits || []
+      };
+
+      await db.users.upsert(validatedUser);
+      setUsers(prev => prev.map(u => u.id === validatedUser.id ? validatedUser : u));
+      if (currentUser?.id === validatedUser.id) {
+        setCurrentUser(validatedUser);
+      }
+    } catch (err) { 
+      console.error("Erro Crítico no Upsert User:", err);
+      alert("Erro ao atualizar dados na nuvem. Verifique as permissões."); 
+      throw err; // Propaga para o componente que chamou
+    }
+  };
+
+  const handleUpdateRelationships = async (rels: Relationship[]) => {
+    try {
+      await db.relationships.upsertMany(rels);
+      setRelationships(rels);
+    } catch (err) {
+      console.error("Erro Crítico no Upsert Relationships:", err);
+      alert("Erro ao atualizar relações.");
+      throw err;
+    }
   };
 
   if (isLoading) {
@@ -136,7 +160,7 @@ const App: React.FC = () => {
         {dbError && <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-sm font-medium"><AlertTriangle className="w-5 h-5 text-amber-500" /> {dbError}</div>}
         
         {activeTab === 'timeline' && <BirthdayTimeline users={timelineData} viewerId={currentUser.id} />}
-        {activeTab === 'profile' && <ProfilePage user={currentUser} allUsers={users} relationships={relationships} onUpdate={handleUpdateUser} onUpdateRelationships={async (rels) => { await db.relationships.upsertMany(rels); setRelationships(rels); }} />}
+        {activeTab === 'profile' && <ProfilePage user={currentUser} allUsers={users} relationships={relationships} onUpdate={handleUpdateUser} onUpdateRelationships={handleUpdateRelationships} />}
         {activeTab === 'admin' && isAdmin && <AdminPanel users={users} relationships={relationships} onAdd={async u => { await db.users.upsert(u); setUsers([...users, u]); }} onUpdate={handleUpdateUser} onDelete={async id => { await db.users.delete(id); setUsers(users.filter(u => u.id !== id)); }} onUpdateRelationships={async rs => { await db.relationships.upsertMany(rs); setRelationships(rs); }} />}
       </main>
     </div>
