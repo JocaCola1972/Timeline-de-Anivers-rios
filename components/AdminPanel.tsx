@@ -18,16 +18,17 @@ import {
   Terminal,
   Copy,
   Check,
-  Key
+  Key,
+  Loader2
 } from 'lucide-react';
 
 interface Props {
   users: User[];
   relationships: Relationship[];
-  onAdd: (user: User) => void;
-  onUpdate: (user: User) => void;
-  onDelete: (id: string) => void;
-  onUpdateRelationships: (rels: Relationship[]) => void;
+  onAdd: (user: User) => Promise<void>;
+  onUpdate: (user: User) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onUpdateRelationships: (rels: Relationship[]) => Promise<void>;
   onSync: () => void;
   isSyncing: boolean;
 }
@@ -38,6 +39,7 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newRel, setNewRel] = useState({ u1: '', u2: '', type: RelationshipType.FRIEND });
 
@@ -114,6 +116,7 @@ NOTIFY pgrst, 'reload schema';`;
     });
     setEditingUser(null);
     setIsFormOpen(false);
+    setIsSubmitting(false);
   };
 
   const openEdit = (user: User) => {
@@ -122,51 +125,70 @@ NOTIFY pgrst, 'reload schema';`;
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const date = new Date(formState.birthdate!);
-    const { sign, traits } = getZodiac(date);
-    const chinese = getChineseZodiac(date);
-    
-    const userData: User = {
-      ...(formState as User),
-      id: editingUser ? editingUser.id : Math.random().toString(36).substr(2, 9),
-      zodiacSign: sign,
-      zodiacTraits: traits,
-      chineseZodiac: chinese,
-      likes: formState.likes || [],
-      isProfilePrivate: formState.isProfilePrivate || false
-    };
+    setIsSubmitting(true);
 
-    if (editingUser) {
-      onUpdate(userData);
-    } else {
-      onAdd(userData);
+    try {
+      const date = new Date(formState.birthdate!);
+      const { sign, traits } = getZodiac(date);
+      const chinese = getChineseZodiac(date);
+      
+      const userData: User = {
+        ...(formState as User),
+        id: editingUser ? editingUser.id : Math.random().toString(36).substr(2, 9),
+        zodiacSign: sign,
+        zodiacTraits: traits,
+        chineseZodiac: chinese,
+        likes: formState.likes || [],
+        isProfilePrivate: formState.isProfilePrivate || false
+      };
+
+      if (editingUser) {
+        await onUpdate(userData);
+      } else {
+        await onAdd(userData);
+      }
+      resetForm();
+    } catch (error) {
+      console.error("Erro no formulário:", error);
+      // O erro já é tratado no App.tsx com um alert, mas paramos o loading aqui
+      setIsSubmitting(false);
     }
-    resetForm();
   };
 
-  const handleCreateRel = (e: React.FormEvent) => {
+  const handleCreateRel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRel.u1 || !newRel.u2 || newRel.u1 === newRel.u2) {
       alert("Selecione dois utilizadores diferentes.");
       return;
     }
     
-    const rel: Relationship = {
-      id: `rel-admin-${Date.now()}`,
-      userId: newRel.u1,
-      relatedUserId: newRel.u2,
-      type: newRel.type
-    };
-    onUpdateRelationships([...relationships, rel]);
-    setNewRel({ u1: '', u2: '', type: RelationshipType.FRIEND });
-    alert("Vínculo criado!");
+    setIsSubmitting(true);
+    try {
+      const rel: Relationship = {
+        id: `rel-admin-${Date.now()}`,
+        userId: newRel.u1,
+        relatedUserId: newRel.u2,
+        type: newRel.type
+      };
+      await onUpdateRelationships([...relationships, rel]);
+      setNewRel({ u1: '', u2: '', type: RelationshipType.FRIEND });
+      alert("Vínculo criado!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const deleteRel = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
+    if (confirm("Tens a certeza que queres remover este utilizador e todos os seus dados?")) {
+      await onDelete(id);
+    }
+  };
+
+  const deleteRel = async (id: string) => {
     if (confirm("Deseja remover esta relação?")) {
-      onUpdateRelationships(relationships.filter(r => r.id !== id));
+      await onUpdateRelationships(relationships.filter(r => r.id !== id));
     }
   };
 
@@ -244,7 +266,7 @@ NOTIFY pgrst, 'reload schema';`;
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => onDelete(user.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteUser(user.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     </tr>
@@ -272,7 +294,9 @@ NOTIFY pgrst, 'reload schema';`;
               <select value={newRel.type} onChange={e => setNewRel({...newRel, type: e.target.value as RelationshipType})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold">
                 {Object.entries(RELATIONSHIP_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <button type="submit" className="bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all text-xs py-2.5 shadow-md shadow-indigo-100">Criar Relação</button>
+              <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all text-xs py-2.5 shadow-md shadow-indigo-100 flex items-center justify-center">
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Relação'}
+              </button>
             </form>
           </div>
 
@@ -337,8 +361,8 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-amber-900">Nota Importante</h4>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  Para garantir o suporte a passwords personalizadas e à wishlist, execute os comandos <code>ALTER TABLE</code> acima. 
-                  A coluna <code>password</code> permitirá que cada colega tenha a sua chave de acesso segura.
+                  Se a app der erro ao adicionar utilizadores, é quase certo que a coluna <code>password</code> ainda não existe na tabela <code>users</code>. 
+                  O Supabase não permite gravar campos que não foram definidos no seu sistema.
                 </p>
               </div>
             </div>
@@ -351,32 +375,32 @@ NOTIFY pgrst, 'reload schema';`;
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="text-sm font-bold text-slate-800">{editingUser ? 'Editar Perfil' : 'Novo Perfil'}</h3>
-              <button onClick={resetForm} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+              <button onClick={resetForm} disabled={isSubmitting} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Nome Completo</label>
-                  <input type="text" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                  <input type="text" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Telemóvel</label>
-                  <input type="tel" value={formState.phone} onChange={e => setFormState({...formState, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                  <input type="tel" value={formState.phone} onChange={e => setFormState({...formState, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Password Inicial</label>
                   <div className="relative">
                     <Key className="absolute left-3 top-3 w-4 h-4 text-slate-300" />
-                    <input type="text" value={formState.password || ''} onChange={e => setFormState({...formState, password: e.target.value})} placeholder="Obrigatório para segurança" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                    <input type="text" value={formState.password || ''} onChange={e => setFormState({...formState, password: e.target.value})} placeholder="Obrigatório para segurança" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Data Nascimento</label>
-                  <input type="date" value={formState.birthdate} onChange={e => setFormState({...formState, birthdate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                  <input type="date" value={formState.birthdate} onChange={e => setFormState({...formState, birthdate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
                 </div>
               </div>
-              <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all mt-4">
-                {editingUser ? 'Atualizar Cloud' : 'Criar no Sistema'}
+              <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all mt-4 flex items-center justify-center gap-2">
+                {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin" /> A gravar na nuvem...</> : (editingUser ? 'Atualizar Perfil' : 'Criar no Sistema')}
               </button>
             </form>
           </div>

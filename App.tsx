@@ -83,6 +83,18 @@ const App: React.FC = () => {
     return normalizePhone(currentUser.phone) === ADMIN_PHONE;
   }, [currentUser]);
 
+  const handleAddUser = async (u: User) => {
+    try {
+      await db.users.upsert(u);
+      setUsers(prev => [...prev, u]);
+    } catch (err: any) {
+      console.error("Erro ao adicionar utilizador:", err);
+      const errorMsg = err.message || "Erro desconhecido.";
+      alert(`CRÍTICO: Não foi possível adicionar o utilizador.\n\nMotivo: ${errorMsg}\n\nDica: Executou o script SQL na aba de Configuração SQL? A coluna 'password' e 'wishlist' devem existir.`);
+      throw err;
+    }
+  };
+
   const handleUpdateUser = async (updatedUser: User) => {
     try {
       const validatedUser = {
@@ -97,10 +109,9 @@ const App: React.FC = () => {
         setCurrentUser(validatedUser);
       }
     } catch (err: any) { 
-      console.error("Erro Crítico no Upsert User:", err);
-      // Aqui exibimos o erro detalhado para ajudar o utilizador a diagnosticar (ex: falta de coluna na tabela)
+      console.error("Erro no Upsert User:", err);
       const errorMsg = err.message || "Erro de permissões ou ligação.";
-      alert(`Erro ao atualizar na nuvem: ${errorMsg}\n\nNota: Verifique se a coluna 'wishlist' existe na sua tabela 'users' no Supabase.`); 
+      alert(`Erro ao atualizar na nuvem: ${errorMsg}\n\nNota: Verifique se as colunas necessárias existem no Supabase.`); 
       throw err;
     }
   };
@@ -110,9 +121,19 @@ const App: React.FC = () => {
       await db.relationships.upsertMany(rels);
       setRelationships(rels);
     } catch (err) {
-      console.error("Erro Crítico no Upsert Relationships:", err);
+      console.error("Erro no Upsert Relationships:", err);
       alert("Erro ao atualizar relações na nuvem.");
       throw err;
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await db.users.delete(id);
+      setUsers(prev => prev.filter(u => u.id !== id));
+    } catch (err: any) {
+      console.error("Erro ao apagar utilizador:", err);
+      alert(`Erro ao apagar utilizador: ${err.message}`);
     }
   };
 
@@ -190,10 +211,10 @@ const App: React.FC = () => {
           <AdminPanel 
             users={users} 
             relationships={relationships} 
-            onAdd={async u => { await db.users.upsert(u); setUsers([...users, u]); }} 
+            onAdd={handleAddUser} 
             onUpdate={handleUpdateUser} 
-            onDelete={async id => { await db.users.delete(id); setUsers(users.filter(u => u.id !== id)); }} 
-            onUpdateRelationships={async rs => { await db.relationships.upsertMany(rs); setRelationships(rs); }} 
+            onDelete={handleDeleteUser} 
+            onUpdateRelationships={handleUpdateRelationships} 
             onSync={() => fetchData(true)}
             isSyncing={isSyncing}
           />
