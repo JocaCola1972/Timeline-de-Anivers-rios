@@ -162,15 +162,24 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
           <div className="p-2 bg-amber-50 rounded-xl text-amber-600"><Calendar className="w-4 h-4" /></div>
           <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Meses de Festa</h3>
         </div>
-        <div className="flex items-end justify-between h-32 gap-1 px-2">
+        <div className="flex items-end justify-between h-40 gap-1 px-1">
           {MONTHS_PT.map((m, i) => {
             const count = stats.monthCounts[i] || 0;
             return (
               <div key={m} className="flex-1 flex flex-col items-center gap-2 group relative">
-                <motion.div initial={{ height: 0 }} animate={{ height: `${(count / maxMonthVal) * 100}%` }} className={`w-full rounded-t-md transition-all ${count > 0 ? 'bg-amber-400 shadow-sm' : 'bg-slate-50'}`} />
-                <span className="text-[8px] font-black text-slate-700 uppercase transform -rotate-45 md:rotate-0 tracking-tighter">{m.slice(0, 3)}</span>
+                <div className="w-full bg-slate-50 rounded-t-lg h-full absolute inset-0 -z-10 opacity-50" />
+                <motion.div 
+                  initial={{ height: 0 }} 
+                  animate={{ height: `${(count / maxMonthVal) * 100}%` }} 
+                  className={`w-full rounded-t-lg transition-all relative z-10 ${count > 0 ? 'bg-amber-400 shadow-[0_-2px_8px_rgba(251,191,36,0.2)]' : 'bg-transparent'}`} 
+                />
+                <span className="text-[10px] font-black text-slate-800 uppercase transform -rotate-45 md:rotate-0 tracking-tighter mb-1 mt-auto">
+                  {m.slice(0, 3)}
+                </span>
                 {count > 0 && (
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[8px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">{count} aniv.</div>
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
+                    {count} {count === 1 ? 'aniv.' : 'aniv.'}
+                  </div>
                 )}
               </div>
             );
@@ -285,6 +294,13 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
         </div>
       </div>
 
+      {viewer && (
+        <DailyHoroscope 
+          westernSign={viewer.zodiacSign} 
+          chineseSign={getChineseZodiac(new Date(viewer.birthdate))} 
+        />
+      )}
+
       <TeamInsights users={users} />
 
       <AnimatePresence>
@@ -308,13 +324,6 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
           />
         )}
       </AnimatePresence>
-      
-      {viewer && (
-        <DailyHoroscope 
-          westernSign={viewer.zodiacSign} 
-          chineseSign={getChineseZodiac(new Date(viewer.birthdate))} 
-        />
-      )}
     </div>
   );
 };
