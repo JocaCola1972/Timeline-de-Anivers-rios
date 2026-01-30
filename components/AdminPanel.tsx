@@ -45,10 +45,12 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
   });
 
   const filteredUsers = useMemo(() => {
-    return users.filter(u => 
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      u.phone.includes(searchTerm)
-    );
+    return users
+      .filter(u => 
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.phone.includes(searchTerm)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }));
   }, [users, searchTerm]);
 
   const resetForm = () => {
@@ -136,7 +138,7 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-800">Base de Dados de Equipa</h2>
-              <p className="text-slate-500 text-xs">Gestão centralizada de perfis.</p>
+              <p className="text-slate-500 text-xs">Gestão centralizada de perfis (Ordenação Alfabética).</p>
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -207,11 +209,11 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
             <form onSubmit={handleCreateRel} className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <select value={newRel.u1} onChange={e => setNewRel({...newRel, u1: e.target.value})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
                 <option value="">De (Utilizador)...</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                {[...users].sort((a,b) => a.name.localeCompare(b.name)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
               <select value={newRel.u2} onChange={e => setNewRel({...newRel, u2: e.target.value})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
                 <option value="">Para (Alvo)...</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                {[...users].sort((a,b) => a.name.localeCompare(b.name)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
               <select value={newRel.type} onChange={e => setNewRel({...newRel, type: e.target.value as RelationshipType})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold">
                 {Object.entries(RELATIONSHIP_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
