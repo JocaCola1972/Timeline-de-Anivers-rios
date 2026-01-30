@@ -47,7 +47,6 @@ const App: React.FC = () => {
       }
       
       if (isManual) {
-        // Opcional: Pequeno delay para o utilizador ver a animação
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (err: any) {
@@ -97,9 +96,11 @@ const App: React.FC = () => {
       if (currentUser?.id === validatedUser.id) {
         setCurrentUser(validatedUser);
       }
-    } catch (err) { 
+    } catch (err: any) { 
       console.error("Erro Crítico no Upsert User:", err);
-      alert("Erro ao atualizar dados na nuvem. Verifique as permissões."); 
+      // Aqui exibimos o erro detalhado para ajudar o utilizador a diagnosticar (ex: falta de coluna na tabela)
+      const errorMsg = err.message || "Erro de permissões ou ligação.";
+      alert(`Erro ao atualizar na nuvem: ${errorMsg}\n\nNota: Verifique se a coluna 'wishlist' existe na sua tabela 'users' no Supabase.`); 
       throw err;
     }
   };
@@ -110,7 +111,7 @@ const App: React.FC = () => {
       setRelationships(rels);
     } catch (err) {
       console.error("Erro Crítico no Upsert Relationships:", err);
-      alert("Erro ao atualizar relações.");
+      alert("Erro ao atualizar relações na nuvem.");
       throw err;
     }
   };

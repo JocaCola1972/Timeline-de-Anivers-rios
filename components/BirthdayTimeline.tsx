@@ -111,11 +111,11 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
     const zodiacCounts: Record<string, number> = {};
     const monthCounts: Record<number, number> = {};
     const generations = {
-      'Boomers': 0, // 1946-1964
-      'Gen X': 0,    // 1965-1980
-      'Millennials': 0, // 1981-1996
-      'Gen Z': 0,    // 1997-2012
-      'Gen Alpha': 0 // 2013+
+      'Boomers': 0, 
+      'Gen X': 0,   
+      'Millennials': 0, 
+      'Gen Z': 0,   
+      'Gen Alpha': 0
     };
 
     users.forEach(u => {
@@ -137,48 +137,65 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-12">
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><Users className="w-4 h-4" /></div>
-          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Demografia da Equipa</h3>
+      {/* Demografia Card */}
+      <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm flex flex-col">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600"><Users className="w-5 h-5" /></div>
+          <div>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Demografia</h3>
+            <p className="text-[10px] text-slate-400 font-bold">Equilíbrio Geracional</p>
+          </div>
         </div>
-        <div className="space-y-4 flex-1 flex flex-col justify-center">
+        <div className="space-y-5 flex-1 flex flex-col justify-center">
           {Object.entries(stats.generations).filter(([_, count]) => count > 0).map(([gen, count]) => (
-            <div key={gen} className="space-y-1">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
-                <span className="text-slate-700">{gen}</span>
+            <div key={gen} className="space-y-1.5">
+              <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
+                <span className="text-slate-600">{gen}</span>
                 <span className="text-indigo-600">{count} {count === 1 ? 'pessoa' : 'pessoas'}</span>
               </div>
-              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${(count / users.length) * 100}%` }} className="h-full bg-indigo-500 rounded-full" />
+              <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${(count / users.length) * 100}%` }} className="h-full bg-indigo-500 rounded-full shadow-sm" />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-amber-50 rounded-xl text-amber-600"><Calendar className="w-4 h-4" /></div>
-          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Meses de Festa</h3>
+      {/* Meses de Festa Card - IMPROVED LEGIBILITY */}
+      <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600"><Calendar className="w-5 h-5" /></div>
+          <div>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Meses de Festa</h3>
+            <p className="text-[10px] text-slate-400 font-bold">Volume de Aniversários</p>
+          </div>
         </div>
-        <div className="flex items-end justify-between h-40 gap-1 px-1">
+        <div className="flex items-end justify-between h-48 gap-1.5 px-1 relative">
           {MONTHS_PT.map((m, i) => {
             const count = stats.monthCounts[i] || 0;
             return (
-              <div key={m} className="flex-1 flex flex-col items-center gap-2 group relative">
-                <div className="w-full bg-slate-50 rounded-t-lg h-full absolute inset-0 -z-10 opacity-50" />
-                <motion.div 
-                  initial={{ height: 0 }} 
-                  animate={{ height: `${(count / maxMonthVal) * 100}%` }} 
-                  className={`w-full rounded-t-lg transition-all relative z-10 ${count > 0 ? 'bg-amber-400 shadow-[0_-2px_8px_rgba(251,191,36,0.2)]' : 'bg-transparent'}`} 
-                />
-                <span className="text-[10px] font-black text-slate-800 uppercase transform -rotate-45 md:rotate-0 tracking-tighter mb-1 mt-auto">
+              <div key={m} className="flex-1 flex flex-col items-center gap-3 group h-full relative">
+                {/* Background Track */}
+                <div className="absolute top-0 w-full bg-slate-50 rounded-lg h-[calc(100%-30px)] -z-10 border border-slate-100/50" />
+                
+                {/* Value Bar */}
+                <div className="flex-1 w-full flex flex-col justify-end">
+                  <motion.div 
+                    initial={{ height: 0 }} 
+                    animate={{ height: `${(count / maxMonthVal) * 100}%` }} 
+                    className={`w-full rounded-lg transition-all relative z-10 ${count > 0 ? 'bg-amber-400 shadow-[0_-2px_10px_rgba(251,191,36,0.3)]' : 'bg-transparent'}`} 
+                  />
+                </div>
+                
+                {/* Month Label */}
+                <span className="text-[10px] font-black text-slate-800 uppercase tracking-tighter h-[20px] flex items-center">
                   {m.slice(0, 3)}
                 </span>
+                
+                {/* Tooltip on Hover */}
                 {count > 0 && (
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 shadow-xl">
-                    {count} {count === 1 ? 'aniv.' : 'aniv.'}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-20 shadow-2xl">
+                    {count} {count === 1 ? 'Aniversário' : 'Aniversários'}
                   </div>
                 )}
               </div>
@@ -187,20 +204,27 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-purple-50 rounded-xl text-purple-600"><Sparkles className="w-4 h-4" /></div>
-          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Energia Astral</h3>
+      {/* Energia Astral Card */}
+      <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="p-2.5 bg-purple-50 rounded-xl text-purple-600"><Sparkles className="w-5 h-5" /></div>
+          <div>
+            <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Energia Astral</h3>
+            <p className="text-[10px] text-slate-400 font-bold">Signos Dominantes</p>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {Object.entries(stats.zodiacCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([sign, count]) => (
-            <div key={sign} className="bg-slate-50 p-3 rounded-2xl flex items-center justify-between group hover:bg-purple-50 transition-colors">
-              <span className="text-[10px] font-bold text-slate-700">{sign}</span>
-              <span className="text-xs font-black text-purple-600 bg-white w-6 h-6 rounded-lg flex items-center justify-center shadow-sm">{count}</span>
+            <div key={sign} className="bg-slate-50 p-4 rounded-[1.5rem] border border-slate-100 flex items-center justify-between group hover:bg-purple-50 hover:border-purple-100 transition-all">
+              <span className="text-xs font-black text-slate-700">{sign}</span>
+              <span className="text-xs font-black text-purple-600 bg-white w-7 h-7 rounded-xl flex items-center justify-center shadow-sm border border-purple-50">{count}</span>
             </div>
           ))}
         </div>
-        <p className="text-[9px] text-slate-600 mt-4 text-center font-medium leading-tight">Estes são os signos mais comuns na equipa. <br/>A harmonia entre elementos está no auge!</p>
+        <div className="mt-6 flex gap-3 p-4 bg-purple-50/50 rounded-2xl border border-purple-100/50 items-center">
+          <Info className="w-4 h-4 text-purple-400 flex-shrink-0" />
+          <p className="text-[10px] text-purple-700 font-bold leading-tight">A harmonia astral da equipa está em alta. O cosmos sorri para os vossos projetos!</p>
+        </div>
       </div>
     </div>
   );
@@ -221,6 +245,7 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
 
   return (
     <div className="space-y-8 pb-20">
+      {/* Annual Timeline Container */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
           <div>
@@ -294,6 +319,7 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
         </div>
       </div>
 
+      {/* HOROSCOPE SECTION - MOVED HERE AS REQUESTED */}
       {viewer && (
         <DailyHoroscope 
           westernSign={viewer.zodiacSign} 
@@ -301,8 +327,10 @@ const BirthdayTimeline: React.FC<Props> = ({ users, viewerId }) => {
         />
       )}
 
+      {/* Team Stats/Insights Section */}
       <TeamInsights users={users} />
 
+      {/* Modals Container */}
       <AnimatePresence>
         {activeDetailUser && (
           <UserDetailModal 
