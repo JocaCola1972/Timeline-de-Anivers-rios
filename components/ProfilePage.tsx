@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Relationship, RelationshipType } from '../types';
-import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search, RefreshCw, Key, Eye, EyeOff } from 'lucide-react';
+import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search, RefreshCw, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { RELATIONSHIP_LABELS } from '../constants';
 import { getZodiac, getChineseZodiac } from '../services/zodiacService';
 
@@ -201,17 +201,47 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
                   <p className="text-[9px] text-slate-400 font-medium italic">* Deixa em branco para manter a password atual.</p>
                 </div>
 
-                <div className="mt-8 p-6 bg-pink-50 border border-pink-100 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-2 text-pink-600 font-bold"><Gift className="w-5 h-5" /> A Minha Wishlist</div>
-                  <div className="flex gap-3 bg-white/50 p-4 rounded-xl text-pink-800 text-xs">
-                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <p>O que te faria saltar de alegria? Sê criativo!</p>
+                {/* WISHLIST SECTION - UPDATED WITH FUN TEXT */}
+                <div className="mt-8 p-8 bg-pink-50 border-2 border-pink-100 rounded-[2.5rem] space-y-5 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 group-hover:rotate-0 transition-transform">
+                    <Gift className="w-20 h-20 text-pink-600" />
                   </div>
+                  
+                  <div className="flex items-center gap-3 text-pink-600">
+                    <div className="p-2 bg-white rounded-xl shadow-sm">
+                      <Gift className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">A Minha Wishlist</h3>
+                  </div>
+
+                  <div className="space-y-3 bg-white/60 p-5 rounded-3xl border border-pink-200/50 backdrop-blur-sm shadow-inner">
+                    <div className="flex gap-3 text-pink-900 text-[13px] leading-relaxed font-medium">
+                      <div className="mt-1"><Info className="w-4 h-4 flex-shrink-0 text-pink-500" /></div>
+                      <p>
+                        O que te faria saltar de alegria este ano? Sê criativo! <br/> 
+                        Podes pedir um <strong>touro mecânico</strong> para a sala de reuniões, uma <strong>máquina de pipocas</strong> infinita, ou até um <strong>aumento de ordenado</strong>...
+                      </p>
+                    </div>
+                    
+                    <div className="flex gap-3 items-start p-3 bg-pink-100/50 rounded-2xl border border-pink-200/40">
+                      <AlertCircle className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-pink-800 font-bold italic leading-snug">
+                        Nota de Segurança: Lembra-te que o GM e o Financeiro também estão na lista de utilizadores... pede o aumento por tua conta e risco! 😂
+                      </p>
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-[11px] text-pink-700/60 font-bold">
+                        Outras sugestões: Um bilhete de ida para Marte, um café que nunca arrefece ou apenas um abraço (e um jantar pago).
+                      </p>
+                    </div>
+                  </div>
+
                   <textarea 
                     value={formData.wishlist || ''} 
                     onChange={e => setFormData({...formData, wishlist: e.target.value})} 
-                    placeholder="Escreve aqui os teus desejos..." 
-                    className="w-full h-32 p-4 bg-white border border-pink-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 text-sm resize-none shadow-inner" 
+                    placeholder="Ex: 1. Um touro mecânico (com seguro); 2. Paz no mundo; 3. Um almoço no melhor sushi da cidade..." 
+                    className="w-full h-40 p-5 bg-white border-2 border-pink-100 rounded-[1.8rem] outline-none focus:ring-4 focus:ring-pink-200 focus:border-pink-300 text-sm resize-none shadow-xl transition-all font-medium placeholder:text-pink-200" 
                   />
                 </div>
               </div>
