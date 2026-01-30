@@ -81,7 +81,7 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
           {Object.entries(stats.generations).filter(([_, count]) => count > 0).map(([gen, count]) => (
             <div key={gen} className="space-y-1">
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
-                <span className="text-slate-500">{gen}</span>
+                <span className="text-slate-700">{gen}</span>
                 <span className="text-indigo-600">{count} {count === 1 ? 'pessoa' : 'pessoas'}</span>
               </div>
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -112,12 +112,14 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
                 <motion.div 
                   initial={{ height: 0 }}
                   animate={{ height: `${(count / maxMonthVal) * 100}%` }}
-                  className={`w-full rounded-t-md transition-all ${count > 0 ? 'bg-amber-400' : 'bg-slate-50'}`}
+                  className={`w-full rounded-t-md transition-all ${count > 0 ? 'bg-amber-400 shadow-sm' : 'bg-slate-50'}`}
                 />
-                <span className="text-[8px] font-bold text-slate-400 uppercase transform -rotate-45 md:rotate-0">{m.slice(0, 3)}</span>
+                <span className="text-[8px] font-black text-slate-700 uppercase transform -rotate-45 md:rotate-0 tracking-tighter">
+                  {m.slice(0, 3)}
+                </span>
                 {count > 0 && (
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[8px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    {count}
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[8px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                    {count} {count === 1 ? 'aniv.' : 'aniv.'}
                   </div>
                 )}
               </div>
@@ -148,7 +150,7 @@ const TeamInsights: React.FC<{ users: User[] }> = ({ users }) => {
             <div className="col-span-2 text-center py-8 text-slate-400 text-[10px] italic">Sem dados astrais.</div>
           )}
         </div>
-        <p className="text-[9px] text-slate-400 mt-4 text-center leading-tight">
+        <p className="text-[9px] text-slate-600 mt-4 text-center font-medium leading-tight">
           Estes são os signos mais comuns na equipa. <br/>A harmonia entre elementos está no auge!
         </p>
       </div>
