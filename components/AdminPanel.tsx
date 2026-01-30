@@ -13,7 +13,11 @@ import {
   Link as LinkIcon,
   Plus,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Database,
+  Terminal,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface Props {
@@ -28,10 +32,11 @@ interface Props {
 }
 
 const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, onDelete, onUpdateRelationships, onSync, isSyncing }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'rels'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'rels' | 'sql'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [copied, setCopied] = useState(false);
   
   const [newRel, setNewRel] = useState({ u1: '', u2: '', type: RelationshipType.FRIEND });
 
@@ -43,6 +48,46 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
     isProfilePrivate: false,
     avatarUrl: ''
   });
+
+  const sqlSchema = `-- SCRIPT DE CONFIGURAÇÃO DA BASE DE DADOS (SUPABASE)
+
+-- 1. Tabela de Utilizadores
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT UNIQUE NOT NULL,
+  birthdate DATE NOT NULL,
+  zodiac_sign TEXT,
+  zodiac_traits TEXT[],
+  chinese_zodiac TEXT,
+  avatar_url TEXT,
+  likes TEXT[] DEFAULT '{}',
+  wishlist TEXT,
+  is_profile_private BOOLEAN DEFAULT FALSE,
+  must_change_password BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- 2. Tabela de Relações
+CREATE TABLE IF NOT EXISTS relationships (
+  id TEXT PRIMARY KEY,
+  user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  related_user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- 3. Atualização (Caso falte a coluna wishlist)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wishlist TEXT;
+
+-- 4. Atualizar Cache do PostgREST
+NOTIFY pgrst, 'reload schema';`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(sqlSchema);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const filteredUsers = useMemo(() => {
     return users
@@ -124,16 +169,19 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
 
   return (
     <div className="space-y-6">
-      <div className="flex border-b border-slate-200">
-        <button onClick={() => setActiveSubTab('users')} className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeSubTab === 'users' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+      <div className="flex border-b border-slate-200 overflow-x-auto no-scrollbar">
+        <button onClick={() => setActiveSubTab('users')} className={`px-6 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'users' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
           <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Utilizadores</div>
         </button>
-        <button onClick={() => setActiveSubTab('rels')} className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeSubTab === 'rels' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+        <button onClick={() => setActiveSubTab('rels')} className={`px-6 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'rels' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
           <div className="flex items-center gap-2"><LinkIcon className="w-4 h-4" /> Relações Globais</div>
+        </button>
+        <button onClick={() => setActiveSubTab('sql')} className={`px-6 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'sql' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+          <div className="flex items-center gap-2"><Database className="w-4 h-4" /> Configuração SQL</div>
         </button>
       </div>
 
-      {activeSubTab === 'users' ? (
+      {activeSubTab === 'users' && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -201,9 +249,10 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeSubTab === 'rels' && (
         <div className="space-y-6 animate-in fade-in duration-300">
-          {/* Formulário de Nova Relação */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm"><Plus className="w-4 h-4 text-indigo-500" /> Registar Novo Vínculo</h3>
             <form onSubmit={handleCreateRel} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -246,6 +295,47 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'sql' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-slate-900 rounded-2xl text-white">
+                <Terminal className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-800">Manutenção do Schema</h3>
+                <p className="text-xs text-slate-500 font-medium">Copia e executa estes comandos no SQL Editor do Supabase para corrigir erros de colunas em falta.</p>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <button 
+                  onClick={copyToClipboard}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all shadow-lg"
+                >
+                  {copied ? <><Check className="w-3 h-3" /> Copiado!</> : <><Copy className="w-3 h-3" /> Copiar SQL</>}
+                </button>
+              </div>
+              <pre className="bg-slate-900 text-indigo-300 p-6 rounded-2xl text-[11px] font-mono leading-relaxed overflow-x-auto shadow-inner min-h-[300px]">
+                {sqlSchema}
+              </pre>
+            </div>
+
+            <div className="p-6 bg-amber-50 border border-amber-100 rounded-2xl flex gap-4">
+              <Database className="w-6 h-6 text-amber-500 flex-shrink-0" />
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-amber-900">Nota Importante</h4>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  Se a sua Wishlist der erro ao guardar, é quase certo que a coluna <code>wishlist</code> ainda não existe na tabela <code>users</code>. 
+                  Ao executar o comando <code>ALTER TABLE users ADD COLUMN wishlist TEXT;</code>, o Supabase criará o campo e a app voltará a funcionar instantaneamente.
+                </p>
+              </div>
             </div>
           </div>
         </div>
