@@ -11,6 +11,7 @@ export interface User {
   name: string;
   phone: string;
   email?: string;
+  password?: string;
   birthdate: string; // ISO format
   zodiacSign: string;
   zodiacTraits: string[];

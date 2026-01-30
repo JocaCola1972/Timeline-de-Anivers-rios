@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { User, Relationship, RelationshipType } from '../types';
-import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search, RefreshCw } from 'lucide-react';
+import { Gift, Info, Save, Camera, User as UserIcon, Heart, Search, RefreshCw, Key, Eye, EyeOff } from 'lucide-react';
 import { RELATIONSHIP_LABELS } from '../constants';
 import { getZodiac, getChineseZodiac } from '../services/zodiacService';
 
@@ -24,8 +24,8 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [relSearch, setRelSearch] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Sincronizar formData se o user prop mudar (ex: após login ou refresh)
   useEffect(() => {
     setFormData({
       ...user,
@@ -34,7 +34,6 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
     });
   }, [user]);
 
-  // Filtra as relações do utilizador atual
   const [userRels, setUserRels] = useState<Relationship[]>(
     relationships.filter(r => r.userId === user.id)
   );
@@ -147,49 +146,74 @@ const ProfilePage: React.FC<Props> = ({ user, allUsers, relationships, onUpdate,
 
       <form onSubmit={handleSave} className="space-y-6">
         {activeTab === 'info' ? (
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-left-4">
-            <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-            <div className="px-8 pb-8 -mt-10">
-              <div className="w-24 h-24 rounded-2xl border-4 border-white bg-slate-100 mb-6 overflow-hidden shadow-lg group relative">
-                <img src={formData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}`} className="w-full h-full object-cover" alt="Avatar" />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera className="w-6 h-6 text-white" />
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden animate-in slide-in-from-left-4">
+              <div className="h-24 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+              <div className="px-8 pb-8 -mt-10">
+                <div className="w-24 h-24 rounded-2xl border-4 border-white bg-slate-100 mb-6 overflow-hidden shadow-lg group relative">
+                  <img src={formData.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}`} className="w-full h-full object-cover" alt="Avatar" />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Nome</label>
-                  <input 
-                    type="text" 
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Nome</label>
+                    <input 
+                      type="text" 
+                      value={formData.name} 
+                      onChange={e => setFormData({...formData, name: e.target.value})} 
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Aniversário</label>
+                    <input 
+                      type="date" 
+                      value={formData.birthdate} 
+                      onChange={e => handleBirthdateChange(e.target.value)} 
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2 text-indigo-600 font-bold">
+                    <Key className="w-5 h-5" /> Redefinir Password
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      value={formData.password || ''} 
+                      onChange={e => setFormData({...formData, password: e.target.value})} 
+                      placeholder="Nova password..." 
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none pr-12" 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-medium italic">* Deixa em branco para manter a password atual.</p>
+                </div>
+
+                <div className="mt-8 p-6 bg-pink-50 border border-pink-100 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-2 text-pink-600 font-bold"><Gift className="w-5 h-5" /> A Minha Wishlist</div>
+                  <div className="flex gap-3 bg-white/50 p-4 rounded-xl text-pink-800 text-xs">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p>O que te faria saltar de alegria? Sê criativo!</p>
+                  </div>
+                  <textarea 
+                    value={formData.wishlist || ''} 
+                    onChange={e => setFormData({...formData, wishlist: e.target.value})} 
+                    placeholder="Escreve aqui os teus desejos..." 
+                    className="w-full h-32 p-4 bg-white border border-pink-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 text-sm resize-none shadow-inner" 
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Aniversário</label>
-                  <input 
-                    type="date" 
-                    value={formData.birthdate} 
-                    onChange={e => handleBirthdateChange(e.target.value)} 
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" 
-                  />
-                </div>
-              </div>
-
-              <div className="mt-8 p-6 bg-pink-50 border border-pink-100 rounded-2xl space-y-4">
-                <div className="flex items-center gap-2 text-pink-600 font-bold"><Gift className="w-5 h-5" /> A Minha Wishlist</div>
-                <div className="flex gap-3 bg-white/50 p-4 rounded-xl text-pink-800 text-xs">
-                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <p>O que te faria saltar de alegria? Exemplos: um <strong>Touro Mecânico</strong> para a copa, um <strong>aumento chorudo</strong>, uma massagem de 5h ou uma viagem a Marte. Sê criativo!</p>
-                </div>
-                <textarea 
-                  value={formData.wishlist || ''} 
-                  onChange={e => setFormData({...formData, wishlist: e.target.value})} 
-                  placeholder="Escreve aqui os teus desejos..." 
-                  className="w-full h-32 p-4 bg-white border border-pink-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 text-sm resize-none shadow-inner" 
-                />
               </div>
             </div>
           </div>

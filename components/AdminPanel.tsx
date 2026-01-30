@@ -17,7 +17,8 @@ import {
   Database,
   Terminal,
   Copy,
-  Check
+  Check,
+  Key
 } from 'lucide-react';
 
 interface Props {
@@ -43,6 +44,7 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
   const [formState, setFormState] = useState<Partial<User>>({
     name: '',
     phone: '',
+    password: '',
     birthdate: '',
     likes: [],
     isProfilePrivate: false,
@@ -56,6 +58,7 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   phone TEXT UNIQUE NOT NULL,
+  password TEXT,
   birthdate DATE NOT NULL,
   zodiac_sign TEXT,
   zodiac_traits TEXT[],
@@ -77,8 +80,9 @@ CREATE TABLE IF NOT EXISTS relationships (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
--- 3. Atualização (Caso falte a coluna wishlist)
+-- 3. Atualização (Caso falte a coluna wishlist ou password)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wishlist TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT;
 
 -- 4. Atualizar Cache do PostgREST
 NOTIFY pgrst, 'reload schema';`;
@@ -102,6 +106,7 @@ NOTIFY pgrst, 'reload schema';`;
     setFormState({
       name: '',
       phone: '',
+      password: '',
       birthdate: '',
       likes: [],
       isProfilePrivate: false,
@@ -332,8 +337,8 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-amber-900">Nota Importante</h4>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  Se a sua Wishlist der erro ao guardar, é quase certo que a coluna <code>wishlist</code> ainda não existe na tabela <code>users</code>. 
-                  Ao executar o comando <code>ALTER TABLE users ADD COLUMN wishlist TEXT;</code>, o Supabase criará o campo e a app voltará a funcionar instantaneamente.
+                  Para garantir o suporte a passwords personalizadas e à wishlist, execute os comandos <code>ALTER TABLE</code> acima. 
+                  A coluna <code>password</code> permitirá que cada colega tenha a sua chave de acesso segura.
                 </p>
               </div>
             </div>
@@ -357,6 +362,13 @@ NOTIFY pgrst, 'reload schema';`;
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Telemóvel</label>
                   <input type="tel" value={formState.phone} onChange={e => setFormState({...formState, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Password Inicial</label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-3 w-4 h-4 text-slate-300" />
+                    <input type="text" value={formState.password || ''} onChange={e => setFormState({...formState, password: e.target.value})} placeholder="Obrigatório para segurança" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Data Nascimento</label>
