@@ -21,6 +21,7 @@ export interface User {
   wishlist?: string;
   isProfilePrivate: boolean;
   mustChangePassword?: boolean;
+  lastLoginDate?: string; // YYYY-MM-DD
 }
 
 export interface Relationship {

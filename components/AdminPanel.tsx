@@ -19,7 +19,9 @@ import {
   Copy,
   Check,
   Key,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 
 interface Props {
@@ -53,9 +55,10 @@ const AdminPanel: React.FC<Props> = ({ users, relationships, onAdd, onUpdate, on
     avatarUrl: ''
   });
 
-  const sqlSchema = `-- SCRIPT DE CONFIGURAÇÃO DA BASE DE DADOS (SUPABASE)
+  const sqlSchema = `-- SCRIPT DE CONFIGURAÇÃO FINAL DA BASE DE DADOS (SUPABASE)
+-- EXECUTE ESTE SCRIPT NO "SQL EDITOR" DO SUPABASE PARA CORRIGIR TODOS OS ERROS
 
--- 1. Tabela de Utilizadores
+-- 1. Criar ou Atualizar a Tabela de Utilizadores
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -70,10 +73,17 @@ CREATE TABLE IF NOT EXISTS users (
   wishlist TEXT,
   is_profile_private BOOLEAN DEFAULT FALSE,
   must_change_password BOOLEAN DEFAULT FALSE,
+  last_login_date TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
--- 2. Tabela de Relações
+-- 2. Garantir que as colunas críticas existem (caso a tabela já tenha sido criada antes)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wishlist TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_date TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
+
+-- 3. Tabela de Relações
 CREATE TABLE IF NOT EXISTS relationships (
   id TEXT PRIMARY KEY,
   user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -82,11 +92,7 @@ CREATE TABLE IF NOT EXISTS relationships (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
--- 3. Atualização (Caso falte a coluna wishlist ou password)
-ALTER TABLE users ADD COLUMN IF NOT EXISTS wishlist TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT;
-
--- 4. Atualizar Cache do PostgREST
+-- 4. Notificar o sistema para atualizar o cache
 NOTIFY pgrst, 'reload schema';`;
 
   const copyToClipboard = () => {
@@ -152,7 +158,6 @@ NOTIFY pgrst, 'reload schema';`;
       resetForm();
     } catch (error) {
       console.error("Erro no formulário:", error);
-      // O erro já é tratado no App.tsx com um alert, mas paramos o loading aqui
       setIsSubmitting(false);
     }
   };
@@ -174,14 +179,13 @@ NOTIFY pgrst, 'reload schema';`;
       };
       await onUpdateRelationships([...relationships, rel]);
       setNewRel({ u1: '', u2: '', type: RelationshipType.FRIEND });
-      alert("Vínculo criado!");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (confirm("Tens a certeza que queres remover este utilizador e todos os seus dados?")) {
+    if (confirm("Tens a certeza que queres remover este utilizador?")) {
       await onDelete(id);
     }
   };
@@ -213,7 +217,7 @@ NOTIFY pgrst, 'reload schema';`;
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-800">Base de Dados de Equipa</h2>
-              <p className="text-slate-500 text-xs">Gestão centralizada de perfis (Ordenação Alfabética).</p>
+              <p className="text-slate-500 text-xs">Gestão centralizada de perfis.</p>
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -257,12 +261,6 @@ NOTIFY pgrst, 'reload schema';`;
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded uppercase">{user.zodiacSign}</span>
-                          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded uppercase">{user.chineseZodiac}</span>
-                        </div>
-                      </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
@@ -278,100 +276,55 @@ NOTIFY pgrst, 'reload schema';`;
         </div>
       )}
 
-      {activeSubTab === 'rels' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm"><Plus className="w-4 h-4 text-indigo-500" /> Registar Novo Vínculo</h3>
-            <form onSubmit={handleCreateRel} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <select value={newRel.u1} onChange={e => setNewRel({...newRel, u1: e.target.value})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
-                <option value="">De (Utilizador)...</option>
-                {[...users].sort((a,b) => a.name.localeCompare(b.name)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-              <select value={newRel.u2} onChange={e => setNewRel({...newRel, u2: e.target.value})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold" required>
-                <option value="">Para (Alvo)...</option>
-                {[...users].sort((a,b) => a.name.localeCompare(b.name)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-              <select value={newRel.type} onChange={e => setNewRel({...newRel, type: e.target.value as RelationshipType})} className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold">
-                {Object.entries(RELATIONSHIP_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-              <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all text-xs py-2.5 shadow-md shadow-indigo-100 flex items-center justify-center">
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Relação'}
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Vínculos Ativos no Sistema ({relationships.length})</h3>
-              <button onClick={onSync} disabled={isSyncing} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {relationships.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs italic font-medium">Nenhuma relação registada globalmente.</div>
-              ) : (
-                relationships.map(rel => (
-                  <div key={rel.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-4 text-xs font-bold">
-                      <span className="text-slate-700">{getUserName(rel.userId)}</span>
-                      <ArrowRight className="w-3 h-3 text-slate-300" />
-                      <span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg">{RELATIONSHIP_LABELS[rel.type]}</span>
-                      <ArrowRight className="w-3 h-3 text-slate-300" />
-                      <span className="text-slate-700">{getUserName(rel.relatedUserId)}</span>
-                    </div>
-                    <button onClick={() => deleteRel(rel.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {activeSubTab === 'sql' && (
         <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-[2rem] border-2 border-amber-200 p-8 shadow-xl shadow-amber-50 space-y-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-slate-900 rounded-2xl text-white">
-                <Terminal className="w-6 h-6" />
+              <div className="p-3 bg-amber-500 rounded-2xl text-white shadow-lg shadow-amber-200">
+                <AlertTriangle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-800">Manutenção do Schema</h3>
-                <p className="text-xs text-slate-500 font-medium">Copia e executa estes comandos no SQL Editor do Supabase para corrigir erros de colunas em falta.</p>
+                <h3 className="text-xl font-black text-slate-800">Como corrigir o erro de Colunas?</h3>
+                <p className="text-sm text-slate-500 font-medium">Siga estes 3 passos para ativar o sistema cloud:</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="bg-white w-8 h-8 rounded-full flex items-center justify-center font-black text-indigo-600 shadow-sm mb-3">1</span>
+                <p className="text-xs font-bold text-slate-700">Copie o script SQL abaixo clicando no botão preto.</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="bg-white w-8 h-8 rounded-full flex items-center justify-center font-black text-indigo-600 shadow-sm mb-3">2</span>
+                <p className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                  Abra o <a href="https://supabase.com/dashboard" target="_blank" className="text-indigo-600 underline">Dashboard Supabase</a> e entre no seu projeto.
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="bg-white w-8 h-8 rounded-full flex items-center justify-center font-black text-indigo-600 shadow-sm mb-3">3</span>
+                <p className="text-xs font-bold text-slate-700">Vá a "SQL Editor", cole o script e clique em "RUN".</p>
               </div>
             </div>
 
             <div className="relative group">
-              <div className="absolute top-4 right-4 flex items-center gap-2">
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
                 <button 
                   onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-black transition-all shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-[11px] font-black rounded-xl hover:bg-black transition-all shadow-xl"
                 >
-                  {copied ? <><Check className="w-3 h-3" /> Copiado!</> : <><Copy className="w-3 h-3" /> Copiar SQL</>}
+                  {copied ? <><Check className="w-4 h-4" /> Copiado com sucesso!</> : <><Copy className="w-4 h-4" /> Copiar Script SQL</>}
                 </button>
               </div>
-              <pre className="bg-slate-900 text-indigo-300 p-6 rounded-2xl text-[11px] font-mono leading-relaxed overflow-x-auto shadow-inner min-h-[300px]">
+              <pre className="bg-slate-900 text-indigo-300 p-8 pt-16 rounded-[1.5rem] text-[11px] font-mono leading-relaxed overflow-x-auto shadow-inner min-h-[350px]">
                 {sqlSchema}
               </pre>
-            </div>
-
-            <div className="p-6 bg-amber-50 border border-amber-100 rounded-2xl flex gap-4">
-              <Database className="w-6 h-6 text-amber-500 flex-shrink-0" />
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold text-amber-900">Nota Importante</h4>
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  Se a app der erro ao adicionar utilizadores, é quase certo que a coluna <code>password</code> ainda não existe na tabela <code>users</code>. 
-                  O Supabase não permite gravar campos que não foram definidos no seu sistema.
-                </p>
-              </div>
             </div>
           </div>
         </div>
       )}
 
       {isFormOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="text-sm font-bold text-slate-800">{editingUser ? 'Editar Perfil' : 'Novo Perfil'}</h3>
@@ -381,26 +334,23 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Nome Completo</label>
-                  <input type="text" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
+                  <input type="text" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" required />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Telemóvel</label>
-                  <input type="tel" value={formState.phone} onChange={e => setFormState({...formState, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
+                  <input type="tel" value={formState.phone} onChange={e => setFormState({...formState, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" required />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Password Inicial</label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-3 w-4 h-4 text-slate-300" />
-                    <input type="text" value={formState.password || ''} onChange={e => setFormState({...formState, password: e.target.value})} placeholder="Obrigatório para segurança" className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
-                  </div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Password</label>
+                  <input type="text" value={formState.password || ''} onChange={e => setFormState({...formState, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" required />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase">Data Nascimento</label>
-                  <input type="date" value={formState.birthdate} onChange={e => setFormState({...formState, birthdate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required disabled={isSubmitting} />
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Nascimento</label>
+                  <input type="date" value={formState.birthdate} onChange={e => setFormState({...formState, birthdate: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border rounded-xl outline-none" required />
                 </div>
               </div>
-              <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all mt-4 flex items-center justify-center gap-2">
-                {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin" /> A gravar na nuvem...</> : (editingUser ? 'Atualizar Perfil' : 'Criar no Sistema')}
+              <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar na Cloud'}
               </button>
             </form>
           </div>

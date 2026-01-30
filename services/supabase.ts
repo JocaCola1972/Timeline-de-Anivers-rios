@@ -21,7 +21,8 @@ const userToDB = (user: User) => ({
   likes: user.likes,
   wishlist: user.wishlist,
   is_profile_private: user.isProfilePrivate,
-  must_change_password: user.mustChangePassword || false
+  must_change_password: user.mustChangePassword || false,
+  last_login_date: user.lastLoginDate
 });
 
 const userFromDB = (data: any): User => ({
@@ -37,7 +38,8 @@ const userFromDB = (data: any): User => ({
   likes: data.likes || [],
   wishlist: data.wishlist,
   isProfilePrivate: data.is_profile_private,
-  mustChangePassword: data.must_change_password
+  mustChangePassword: data.must_change_password,
+  lastLoginDate: data.last_login_date
 });
 
 // Funções de mapeamento para relações

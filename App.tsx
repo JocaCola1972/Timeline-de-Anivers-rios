@@ -8,7 +8,7 @@ import LoginPage from './components/LoginPage';
 import AdminPanel from './components/AdminPanel';
 import { normalizePhone } from './services/zodiacService';
 import { db } from './services/supabase';
-import { LayoutGrid, User as UserIcon, LogOut, ShieldAlert, Settings, RefreshCw, AlertTriangle, Cake } from 'lucide-react';
+import { LayoutGrid, User as UserIcon, LogOut, Settings, RefreshCw, AlertTriangle, Cake, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [isFirstLoginToday, setIsFirstLoginToday] = useState(false);
 
   const ADMIN_PHONE = '917772010';
 
@@ -45,13 +46,9 @@ const App: React.FC = () => {
         }
         setRelationships(remoteRels);
       }
-      
-      if (isManual) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
     } catch (err: any) {
       console.error("Erro Supabase:", err);
-      setDbError("Modo Offline: Tabelas remotas não encontradas.");
+      setDbError("Modo Offline: Tabelas remotas não encontradas ou desatualizadas.");
       setUsers(MOCK_USERS);
       setRelationships(MOCK_RELATIONSHIPS);
     } finally {
@@ -63,6 +60,26 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleLogin = async (user: User) => {
+    const today = new Date().toISOString().split('T')[0];
+    const isFirst = user.lastLoginDate !== today;
+    
+    if (isFirst) {
+      setIsFirstLoginToday(true);
+      // Atualizar a data de login no servidor
+      const updatedUser = { ...user, lastLoginDate: today };
+      try {
+        await db.users.upsert(updatedUser);
+        setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+      } catch (e) {
+        console.warn("Não foi possível atualizar lastLoginDate (coluna em falta?)", e);
+      }
+      setCurrentUser(updatedUser);
+    } else {
+      setCurrentUser(user);
+    }
+  };
 
   const timelineData = useMemo<BirthdayEntry[]>(() => {
     if (!currentUser) return [];
@@ -90,28 +107,21 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Erro ao adicionar utilizador:", err);
       const errorMsg = err.message || "Erro desconhecido.";
-      alert(`CRÍTICO: Não foi possível adicionar o utilizador.\n\nMotivo: ${errorMsg}\n\nDica: Executou o script SQL na aba de Configuração SQL? A coluna 'password' e 'wishlist' devem existir.`);
+      alert(`ERRO DE SCHEMA: A tabela 'users' no Supabase não tem as colunas necessárias.\n\nVai ao Painel ADMIN -> Configuração SQL, copia o script e executa-o no editor de SQL do Supabase.`);
       throw err;
     }
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
-      const validatedUser = {
-        ...updatedUser,
-        likes: updatedUser.likes || [],
-        zodiacTraits: updatedUser.zodiacTraits || []
-      };
-
-      await db.users.upsert(validatedUser);
-      setUsers(prev => prev.map(u => u.id === validatedUser.id ? validatedUser : u));
-      if (currentUser?.id === validatedUser.id) {
-        setCurrentUser(validatedUser);
+      await db.users.upsert(updatedUser);
+      setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+      if (currentUser?.id === updatedUser.id) {
+        setCurrentUser(updatedUser);
       }
     } catch (err: any) { 
-      console.error("Erro no Upsert User:", err);
-      const errorMsg = err.message || "Erro de permissões ou ligação.";
-      alert(`Erro ao atualizar na nuvem: ${errorMsg}\n\nNota: Verifique se as colunas necessárias existem no Supabase.`); 
+      console.error("Erro no Update User:", err);
+      alert(`Erro ao atualizar: Verifique se executou o script SQL no Supabase.`); 
       throw err;
     }
   };
@@ -132,8 +142,7 @@ const App: React.FC = () => {
       await db.users.delete(id);
       setUsers(prev => prev.filter(u => u.id !== id));
     } catch (err: any) {
-      console.error("Erro ao apagar utilizador:", err);
-      alert(`Erro ao apagar utilizador: ${err.message}`);
+      alert(`Erro ao apagar: ${err.message}`);
     }
   };
 
@@ -146,16 +155,26 @@ const App: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <LoginPage users={users} onLogin={setCurrentUser} />;
+    return <LoginPage users={users} onLogin={handleLogin} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {isFirstLoginToday && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-amber-300" />
+            <span className="font-bold text-sm">Bom dia, {currentUser.name}! O teu horóscopo foi atualizado.</span>
+            <button onClick={() => setIsFirstLoginToday(false)} className="ml-4 opacity-50 hover:opacity-100 font-bold">✕</button>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg overflow-hidden group">
-              <Cake className="w-6 h-6 absolute opacity-20 group-hover:scale-125 transition-transform" />
+            <div className="relative w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg overflow-hidden">
+              <Cake className="w-6 h-6 absolute opacity-20" />
               <span className="relative z-10">W</span>
             </div>
             <div className="hidden sm:block">
@@ -169,7 +188,6 @@ const App: React.FC = () => {
               onClick={() => fetchData(true)} 
               disabled={isSyncing}
               className={`p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all ${isSyncing ? 'animate-spin text-indigo-600' : ''}`}
-              title="Sincronizar agora"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
