@@ -1,7 +1,8 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+// Aligned with Google GenAI SDK guidelines: initializing with process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function getDailyHoroscope(westernSign: string, chineseSign: string): Promise<{ western: string; chinese: string }> {
   try {
